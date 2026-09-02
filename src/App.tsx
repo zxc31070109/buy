@@ -593,20 +593,20 @@ function doPost(e) {
               <Sparkles className="w-4 h-4 text-white animate-pulse" />
             </div>
             <div>
-              <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
+              <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
                 香港陀螺連線代購
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-mono font-medium border border-rose-500/30">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-mono font-medium border border-rose-500/30">
                   HK LIVE
                 </span>
               </h1>
-              <p className="text-[11px] text-slate-400">iPhone 15 Pro 快速錄單助手</p>
+              <p className="text-xs text-slate-400">iPhone 15 Pro 快速錄單助手</p>
             </div>
           </div>
 
           {/* 總結計數 */}
           <div className="text-right">
-            <div className="text-[11px] text-slate-400">總訂購 / 總額</div>
-            <div className="text-xs font-bold font-mono text-emerald-400">
+            <div className="text-xs text-slate-400">總訂購 / 總額</div>
+            <div className="text-sm font-bold font-mono text-emerald-400">
               {orders.reduce((s: number, o: any) => s + o.totalCount, 0)} 顆 · NT${orders.reduce((s: number, o: any) => s + o.totalAmount, 0).toLocaleString()}
             </div>
           </div>
@@ -645,22 +645,22 @@ function doPost(e) {
             {/* 1. 買家基本資訊卡片 */}
             <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-400"></span> 1. 買家與單號
+                <span className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span> 1. 買家與單號
                 </span>
-                <span className="text-xs font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                <span className="text-sm font-mono font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-md border border-rose-500/20">
                   {editingOrderId || formOrderId}
                 </span>
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">LINE 暱稱 / 買家識別</label>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">LINE 暱稱 / 買家識別</label>
                 <input
                   type="text"
                   placeholder="例如：小明、阿達 (可備註地區)"
                   value={lineName}
                   onChange={(e) => setLineName(e.target.value)}
-                  className="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                  className="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2.5 text-base text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
                 />
               </div>
             </div>
@@ -668,11 +668,11 @@ function doPost(e) {
             {/* 2. 陀螺型號極速點選卡片 (核心亮點) */}
             <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-indigo-400"></span> 2. 點選陀螺型號 (快速加顆)
+                <span className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span> 2. 點選陀螺型號 (快速加顆)
                 </span>
-                <span className="text-[11px] text-slate-400">
-                  已選 <strong className="text-indigo-400">{totalCount}</strong> 顆
+                <span className="text-xs text-slate-400">
+                  已選 <strong className="text-indigo-400 text-sm">{totalCount}</strong> 顆
                 </span>
               </div>
 
@@ -685,16 +685,16 @@ function doPost(e) {
                       key={item.id}
                       type="button"
                       onClick={() => handleAddItemFromPriceTable(item)}
-                      className={`text-xs px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                      className={`text-sm px-3 py-1.5 rounded-xl font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
                         currentInCart
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 border border-indigo-400'
                           : 'bg-slate-900/80 text-slate-300 border border-slate-700 hover:border-slate-500'
                       }`}
                     >
                       <span>{item.code}</span>
-                      <span className="text-[10px] opacity-75 font-mono">(${item.priceTWD})</span>
+                      <span className="text-xs opacity-75 font-mono">(${item.priceTWD})</span>
                       {currentInCart && (
-                        <span className="ml-1 bg-white text-indigo-900 rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
+                        <span className="ml-1 bg-white text-indigo-900 rounded-full w-4.5 h-4.5 text-xs flex items-center justify-center font-bold">
                           {currentInCart.qty}
                         </span>
                       )}
@@ -710,19 +710,19 @@ function doPost(e) {
                   placeholder="臨時型號 (如 BX99)"
                   value={customCodeInput}
                   onChange={(e) => setCustomCodeInput(e.target.value)}
-                  className="flex-1 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 uppercase"
+                  className="flex-1 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-slate-500 uppercase"
                 />
                 <input
                   type="number"
                   placeholder="台幣價"
                   value={customPriceInput}
                   onChange={(e) => setCustomPriceInput(e.target.value)}
-                  className="w-20 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500"
+                  className="w-24 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-slate-500"
                 />
                 <button
                   type="button"
                   onClick={handleAddCustomItem}
-                  className="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-200 text-xs font-medium hover:bg-slate-600 active:scale-95 cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-200 text-sm font-medium hover:bg-slate-600 active:scale-95 cursor-pointer"
                 >
                   + 自訂
                 </button>
@@ -731,20 +731,20 @@ function doPost(e) {
               {/* 已選清單明細與數量調整 */}
               {selectedItems.length > 0 ? (
                 <div className="space-y-1.5 pt-1">
-                  <div className="text-[11px] font-medium text-slate-400">已選品項清單：</div>
+                  <div className="text-xs font-medium text-slate-400">已選品項清單：</div>
                   {selectedItems.map((item) => (
                     <div
                       key={item.code}
-                      className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-2 flex items-center justify-between"
+                      className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-2.5 flex items-center justify-between"
                     >
                       <div className="flex-1 min-w-0 pr-2">
-                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <div className="text-sm font-bold text-white flex items-center gap-1.5">
                           <span>{item.code}</span>
-                          <span className="text-[10px] text-slate-400 font-normal truncate">
+                          <span className="text-xs text-slate-400 font-normal truncate">
                             {item.name || ''}
                           </span>
                         </div>
-                        <div className="text-[11px] text-indigo-300 font-mono">
+                        <div className="text-xs text-indigo-300 font-mono">
                           NT$ {item.price} × {item.qty} = NT$ {(item.price * item.qty).toLocaleString()}
                         </div>
                       </div>
@@ -758,7 +758,7 @@ function doPost(e) {
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="w-6 text-center font-mono font-bold text-xs text-white">
+                        <span className="w-6 text-center font-mono font-bold text-sm text-white">
                           {item.qty}
                         </span>
                         <button
@@ -773,7 +773,7 @@ function doPost(e) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-3 text-xs text-slate-500 bg-slate-900/40 rounded-xl border border-dashed border-slate-700">
+                <div className="text-center py-3.5 text-xs text-slate-500 bg-slate-900/40 rounded-xl border border-dashed border-slate-700">
                   尚未選擇任何陀螺，請點擊上方型號 👆
                 </div>
               )}
@@ -781,20 +781,20 @@ function doPost(e) {
 
             {/* 3. 盒況與現場採買狀態 (快速打勾/切換) */}
             <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
-              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span> 3. 盒況需求 & 採買狀況
+              <span className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> 3. 盒況需求 & 採買狀況
               </span>
 
               {/* 盒況需求 */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">盒況 / 拆盒偏好 (省行李空間)</label>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">盒況 / 拆盒偏好 (省行李空間)</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {['可拆盒', '保留外盒', '壓盒扁平'].map((opt) => (
                     <button
                       key={opt}
                       type="button"
                       onClick={() => setBoxOption(opt)}
-                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all cursor-pointer ${
+                      className={`py-2 px-1 text-sm rounded-xl font-medium border text-center transition-all cursor-pointer ${
                         boxOption === opt
                           ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold shadow-sm'
                           : 'bg-slate-900/60 border-slate-700 text-slate-400'
@@ -808,7 +808,7 @@ function doPost(e) {
 
               {/* 現場採買狀態 */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">現場搶購狀況</label>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">現場搶購狀況</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {[
                     { label: '已採買', color: 'emerald' },
@@ -819,7 +819,7 @@ function doPost(e) {
                       key={st.label}
                       type="button"
                       onClick={() => setPurchaseStatus(st.label)}
-                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all cursor-pointer ${
+                      className={`py-2 px-1 text-sm rounded-xl font-medium border text-center transition-all cursor-pointer ${
                         purchaseStatus === st.label
                           ? st.label === '已採買'
                             ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
@@ -838,40 +838,40 @@ function doPost(e) {
 
             {/* 4. 自動計價與金流資訊 (訂金 $300/顆 + 尾款自動算) */}
             <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
-              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> 4. 金流對帳與訂金計算
+              <span className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> 4. 金流對帳與訂金計算
               </span>
 
               {/* 價格計算展示區 */}
               <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800 space-y-2">
-                <div className="flex justify-between text-xs text-slate-300">
+                <div className="flex justify-between text-sm text-slate-300">
                   <span>總顆數：</span>
-                  <span className="font-mono font-bold text-white">{totalCount} 顆</span>
+                  <span className="font-mono font-bold text-white text-base">{totalCount} 顆</span>
                 </div>
-                <div className="flex justify-between text-xs text-slate-300">
+                <div className="flex justify-between text-sm text-slate-300">
                   <span>代購總金額：</span>
-                  <span className="font-mono font-bold text-emerald-400">NT$ {totalAmount.toLocaleString()}</span>
+                  <span className="font-mono font-bold text-emerald-400 text-base">NT$ {totalAmount.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-xs text-slate-300 border-t border-slate-800 pt-1.5">
+                <div className="flex justify-between text-sm text-slate-300 border-t border-slate-800 pt-1.5">
                   <span className="flex items-center gap-1">
                     應收訂金 ($300/顆)：
                   </span>
-                  <span className="font-mono font-bold text-amber-400">NT$ {depositExpected.toLocaleString()}</span>
+                  <span className="font-mono font-bold text-amber-400 text-base">NT$ {depositExpected.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-xs font-bold text-slate-100 border-t border-slate-800 pt-1.5">
+                <div className="flex justify-between text-sm font-bold text-slate-100 border-t border-slate-800 pt-1.5">
                   <span>賣貨便貨到付款尾款：</span>
-                  <span className="font-mono text-sm text-rose-400">NT$ {remainingCod.toLocaleString()}</span>
+                  <span className="font-mono text-base text-rose-400">NT$ {remainingCod.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* 訂金匯款狀態與末五碼 */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">訂金入帳狀態</label>
+                  <label className="block text-xs text-slate-400 mb-1 font-medium">訂金入帳狀態</label>
                   <select
                     value={depositStatus}
                     onChange={(e) => setDepositStatus(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:border-emerald-500"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-emerald-500"
                   >
                     <option value="已入帳">✅ 已入帳</option>
                     <option value="已匯待對">⏳ 已匯款待對帳</option>
@@ -879,14 +879,14 @@ function doPost(e) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">買家匯款末五碼</label>
+                  <label className="block text-xs text-slate-400 mb-1 font-medium">買家匯款末五碼</label>
                   <input
                     type="text"
                     maxLength={6}
                     placeholder="例: 12345"
                     value={bankLast5}
                     onChange={(e) => setBankLast5(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder-slate-600 focus:border-emerald-500"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono placeholder-slate-600 focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -894,26 +894,26 @@ function doPost(e) {
               {/* 缺貨退款帳號 (若缺貨時填寫) */}
               {purchaseStatus === '缺貨待退' && (
                 <div className="animate-fadeIn">
-                  <label className="block text-[11px] text-rose-300 mb-1">缺貨退款銀行代碼與帳號</label>
+                  <label className="block text-xs text-rose-300 mb-1 font-medium">缺貨退款銀行代碼與帳號</label>
                   <input
                     type="text"
                     placeholder="例: 822 國泰 0123456789"
                     value={refundAccount}
                     onChange={(e) => setRefundAccount(e.target.value)}
-                    className="w-full bg-slate-900 border border-rose-500/50 rounded-xl px-3 py-2 text-xs text-rose-100 placeholder-slate-600"
+                    className="w-full bg-slate-900 border border-rose-500/50 rounded-xl px-3 py-2 text-sm text-rose-100 placeholder-slate-600"
                   />
                 </div>
               )}
 
               {/* 備註 */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">備註說明</label>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">備註說明</label>
                 <input
                   type="text"
                   placeholder="例如：優先選好盒、跟朋友併單出貨..."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600"
                 />
               </div>
             </div>
@@ -923,15 +923,15 @@ function doPost(e) {
               <button
                 type="button"
                 onClick={handleSaveOrder}
-                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white font-bold text-sm shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer"
+                className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white font-bold text-base shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-5 h-5" />
                 <span>{editingOrderId ? '更新訂單內容' : '立即送出並記錄訂單'}</span>
               </button>
 
               {webhookUrl.trim() && autoSync && (
-                <div className="mt-1.5 text-center text-[10px] text-emerald-400 flex items-center justify-center gap-1 font-medium">
-                  <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
+                <div className="mt-2 text-center text-xs text-emerald-400 flex items-center justify-center gap-1 font-medium">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                   <span>已啟動 Google 試算表自動即時寫入</span>
                 </div>
               )}
@@ -947,18 +947,18 @@ function doPost(e) {
             {/* 搜尋與篩選列 */}
             <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700 space-y-2">
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="搜尋買家暱稱 / 單號 / 型號..."
                   value={orderSearchText}
                   onChange={(e) => setOrderSearchText(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               {/* 篩選標籤 */}
-              <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar text-[11px]">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
                 {[
                   { key: 'ALL', label: '全部' },
                   { key: 'PAID', label: '訂金已入' },
@@ -970,7 +970,7 @@ function doPost(e) {
                     key={f.key}
                     type="button"
                     onClick={() => setOrderStatusFilter(f.key)}
-                    className={`px-2.5 py-1 rounded-lg whitespace-nowrap font-medium transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-all cursor-pointer ${
                       orderStatusFilter === f.key
                         ? 'bg-indigo-600 text-white shadow'
                         : 'bg-slate-900 text-slate-400 hover:text-slate-200'
@@ -984,7 +984,7 @@ function doPost(e) {
 
             {/* 訂單卡片列表 */}
             {filteredOrders.length === 0 ? (
-              <div className="text-center py-12 bg-slate-800/40 rounded-2xl border border-dashed border-slate-700 text-slate-400 text-xs">
+              <div className="text-center py-12 bg-slate-800/40 rounded-2xl border border-dashed border-slate-700 text-slate-400 text-sm">
                 尚無符合條件的訂單
               </div>
             ) : (
@@ -996,17 +996,17 @@ function doPost(e) {
                   {/* 頂部：單號、買家、狀態徽章 */}
                   <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                      <span className="font-mono text-sm font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
                         {order.id}
                       </span>
-                      <span className="text-sm font-bold text-white truncate max-w-[130px]">
+                      <span className="text-base font-bold text-white truncate max-w-[130px]">
                         {order.lineName}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
                       {/* 採買狀況徽章 */}
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         order.purchaseStatus === '已採買'
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                           : order.purchaseStatus === '缺貨待退'
@@ -1017,7 +1017,7 @@ function doPost(e) {
                       </span>
 
                       {/* 訂金狀態徽章 */}
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         order.depositStatus === '已入帳'
                           ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                           : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
@@ -1028,13 +1028,13 @@ function doPost(e) {
                   </div>
 
                   {/* 訂購明細標籤 */}
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5 items-center">
                     {order.items.map((it: any, idx: number) => (
-                      <span key={idx} className="bg-slate-900 text-indigo-300 text-[11px] px-2 py-0.5 rounded-md font-mono border border-slate-700">
+                      <span key={idx} className="bg-slate-900 text-indigo-300 text-xs px-2 py-0.5 rounded-md font-mono border border-slate-700">
                         {it.code} × {it.qty}
                       </span>
                     ))}
-                    <span className="text-[11px] text-slate-400 py-0.5">
+                    <span className="text-xs text-slate-400 py-0.5">
                       (共 {order.totalCount} 顆 · {order.boxOption})
                     </span>
                   </div>
@@ -1042,21 +1042,21 @@ function doPost(e) {
                   {/* 金額統計列 */}
                   <div className="bg-slate-900/90 rounded-xl p-2.5 flex items-center justify-between text-xs font-mono">
                     <div>
-                      <div className="text-[10px] text-slate-400">代購總價</div>
-                      <div className="font-bold text-emerald-400">NT$ {order.totalAmount.toLocaleString()}</div>
+                      <div className="text-xs text-slate-400">代購總價</div>
+                      <div className="font-bold text-sm text-emerald-400">NT$ {order.totalAmount.toLocaleString()}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-slate-400">已付訂金 {order.bankLast5 ? `(${order.bankLast5})` : ''}</div>
-                      <div className="font-bold text-amber-400">NT$ {order.depositPaid.toLocaleString()}</div>
+                      <div className="text-xs text-slate-400">已付訂金 {order.bankLast5 ? `(${order.bankLast5})` : ''}</div>
+                      <div className="font-bold text-sm text-amber-400">NT$ {order.depositPaid.toLocaleString()}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-slate-400">賣貨便尾款</div>
-                      <div className="font-bold text-rose-400">NT$ {order.remainingCod.toLocaleString()}</div>
+                      <div className="text-xs text-slate-400">賣貨便尾款</div>
+                      <div className="font-bold text-sm text-rose-400">NT$ {order.remainingCod.toLocaleString()}</div>
                     </div>
                   </div>
 
                   {order.note && (
-                    <div className="text-[11px] text-slate-400 bg-slate-900/40 px-2 py-1 rounded">
+                    <div className="text-xs text-slate-300 bg-slate-900/50 px-2.5 py-1.5 rounded-lg">
                       💬 備註：{order.note}
                     </div>
                   )}
@@ -1066,7 +1066,7 @@ function doPost(e) {
                     <button
                       type="button"
                       onClick={() => handleCopyLineReply(order)}
-                      className="flex-1 py-2 px-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                      className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold flex items-center justify-center gap-1 hover:bg-emerald-600/30 active:scale-95 transition-all cursor-pointer"
                     >
                       <Copy className="w-3.5 h-3.5" />
                       <span>複製 LINE 確認單</span>
@@ -1109,68 +1109,68 @@ function doPost(e) {
         {/* TAB 3: 陀螺對應定價 Table 管理                           */}
         {/* ========================================================= */}
         {currentTab === 'pricing' && (
-          <div className="space-y-3 animate-fadeIn">
+          <div className="space-y-3.5 animate-fadeIn">
             {/* 頂部功能列 */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-white">陀螺定價資料庫</h2>
-                <p className="text-[11px] text-slate-400">在此維護型號與售價，自動帶入下單計算</p>
+                <h2 className="text-base font-bold text-white">陀螺定價資料庫</h2>
+                <p className="text-xs text-slate-400">在此維護型號與售價，自動帶入下單計算</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAddingPriceItem(!isAddingPriceItem)}
-                className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95 cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95 cursor-pointer"
               >
-                {isAddingPriceItem ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {isAddingPriceItem ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 <span>{isAddingPriceItem ? '收起' : '新增型號'}</span>
               </button>
             </div>
 
             {/* 新增型號摺疊表單 */}
             {isAddingPriceItem && (
-              <div className="bg-slate-800 p-3.5 rounded-2xl border border-indigo-500/40 shadow-xl space-y-2.5 animate-fadeIn">
-                <div className="text-xs font-bold text-indigo-300">＋ 新增陀螺品項與定價</div>
+              <div className="bg-slate-800 p-4 rounded-2xl border border-indigo-500/40 shadow-xl space-y-3 animate-fadeIn">
+                <div className="text-sm font-bold text-indigo-300">＋ 新增陀螺品項與定價</div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-400">型號代碼 (如 BX41)</label>
+                    <label className="block text-xs text-slate-400 mb-1">型號代碼 (如 BX41)</label>
                     <input
                       type="text"
                       placeholder="BX41"
                       value={newPriceCode}
                       onChange={(e) => setNewPriceCode(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400">台灣代購定價 (TWD)</label>
+                    <label className="block text-xs text-slate-400 mb-1">台灣代購定價 (TWD)</label>
                     <input
                       type="number"
                       placeholder="680"
                       value={newPriceTWD}
                       onChange={(e) => setNewPriceTWD(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-slate-400">品名全稱 (選填)</label>
+                  <label className="block text-xs text-slate-400 mb-1">品名全稱 (選填)</label>
                   <input
                     type="text"
                     placeholder="如：BX-41 極限破壞神"
                     value={newPriceName}
                     onChange={(e) => setNewPriceName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-400">分類</label>
+                    <label className="block text-xs text-slate-400 mb-1">分類</label>
                     <select
                       value={newPriceCat}
                       onChange={(e) => setNewPriceCat(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-sm text-white"
                     >
                       <option value="BX系列">BX 系列</option>
                       <option value="UX系列">UX 系列</option>
@@ -1180,13 +1180,13 @@ function doPost(e) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400">備註</label>
+                    <label className="block text-xs text-slate-400 mb-1">備註</label>
                     <input
                       type="text"
                       placeholder="如：附發射器"
                       value={newPriceNote}
                       onChange={(e) => setNewPriceNote(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-sm text-white"
                     />
                   </div>
                 </div>
@@ -1194,7 +1194,7 @@ function doPost(e) {
                 <button
                   type="button"
                   onClick={handleAddNewPriceItem}
-                  className="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-500 active:scale-95 cursor-pointer"
+                  className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-500 active:scale-95 cursor-pointer"
                 >
                   確認加入定價表
                 </button>
@@ -1210,15 +1210,15 @@ function doPost(e) {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                      <span className="font-mono font-bold text-sm text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                         {item.code}
                       </span>
-                      <span className="text-xs font-semibold text-white truncate">
+                      <span className="text-sm font-semibold text-white truncate">
                         {item.name}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
-                      <span className="text-emerald-400 font-mono font-bold">NT$ {item.priceTWD}</span>
+                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                      <span className="text-emerald-400 font-mono font-bold text-sm">NT$ {item.priceTWD}</span>
                       <span>· {item.category}</span>
                       {item.note && <span className="text-slate-500">({item.note})</span>}
                     </div>
@@ -1241,15 +1241,59 @@ function doPost(e) {
         {/* TAB 4: Google 試算表自動寫入設定 & 手動匯出               */}
         {/* ========================================================= */}
         {currentTab === 'sync' && (
-          <div className="space-y-3.5 animate-fadeIn">
-            {/* 🔥 新功能：Google Apps Script Webhook 自動同步卡片 */}
-            <div className="bg-slate-800/95 rounded-2xl p-4 border border-indigo-500/50 shadow-xl space-y-3">
+          <div className="space-y-4 animate-fadeIn">
+            {/* 📊 線上 Google 試算表 (Excel) 專用連結卡片 */}
+            <div className="bg-gradient-to-br from-emerald-900/50 via-slate-800 to-slate-800 rounded-2xl p-4 border border-emerald-500/60 shadow-xl space-y-3.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <div className="flex items-center gap-2 text-white font-bold text-base">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                  <span>線上 Google 試算表 (Excel)</span>
+                </div>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                  即時寫入・線上檢視
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                點擊下方按鈕可直接開啟您的 Google 試算表，即時查看、管理與導出所有代購訂單紀錄：
+              </p>
+
+              <div className="bg-slate-900/90 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between gap-2">
+                <span className="text-xs font-mono text-emerald-300 truncate flex-1">
+                  https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    fallbackCopy('https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing');
+                    showToast('📋 已複製 Google 試算表網址');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 active:scale-95 cursor-pointer border border-slate-700 whitespace-nowrap"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>複製</span>
+                </button>
+              </div>
+
+              <a
+                href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 border border-emerald-400/30 cursor-pointer transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>點此開啟線上 Google 試算表 (Excel)</span>
+              </a>
+            </div>
+
+            {/* 🔥 Google Apps Script Webhook 自動同步卡片 */}
+            <div className="bg-slate-800/95 rounded-2xl p-4 border border-indigo-500/50 shadow-xl space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold text-base">
                   <Zap className="w-5 h-5 text-amber-400 fill-amber-400 animate-pulse" />
                   <span>Google 試算表自動同步 (Webhook)</span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
                   免貼上・即時寫入
                 </span>
               </div>
@@ -1259,7 +1303,7 @@ function doPost(e) {
               </p>
 
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1 font-semibold">
+                <label className="block text-xs text-slate-400 mb-1 font-semibold">
                   Google Apps Script Webhook 網址
                 </label>
                 <div className="flex gap-2">
@@ -1277,7 +1321,7 @@ function doPost(e) {
                         setWebhookUrl(DEFAULT_WEBHOOK_URL);
                         showToast('已重置為最新預設 Webhook 網址');
                       }}
-                      className="px-2.5 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs hover:bg-amber-500/30 active:scale-95 cursor-pointer font-medium"
+                      className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs hover:bg-amber-500/30 active:scale-95 cursor-pointer font-medium whitespace-nowrap"
                     >
                       重置網址
                     </button>
@@ -1289,7 +1333,7 @@ function doPost(e) {
                         setWebhookUrl('');
                         showToast('已清除 Webhook 網址');
                       }}
-                      className="px-2.5 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 active:scale-95 cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 active:scale-95 cursor-pointer whitespace-nowrap"
                     >
                       清除
                     </button>
@@ -1302,7 +1346,7 @@ function doPost(e) {
                 type="button"
                 onClick={handleTestWebhook}
                 disabled={isTestingWebhook}
-                className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-indigo-400/30 shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                className="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-indigo-400/30 shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
                 <span>{isTestingWebhook ? '測試連線中...' : '🧪 點我測試寫入 1 筆資料至 Google 試算表'}</span>
@@ -1343,8 +1387,8 @@ function doPost(e) {
                 {showGasTutorial && (
                   <div className="mt-3 p-3 rounded-xl bg-slate-900/95 border border-slate-700 space-y-2.5 text-xs text-slate-300 animate-fadeIn">
                     <div className="font-bold text-white text-xs">🛠️ 1 分鐘 Google 試算表設定步驟：</div>
-                    <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-300 leading-relaxed">
-                      <li>開啟您的 <a href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing" target="_blank" rel="noreferrer" className="text-amber-400 underline">Google 試算表</a>。</li>
+                    <ol className="list-decimal list-inside space-y-1.5 text-xs text-slate-300 leading-relaxed">
+                      <li>開啟您的 <a href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing" target="_blank" rel="noreferrer" className="text-amber-400 underline font-bold">Google 試算表</a>。</li>
                       <li>點選上方選單 <strong>「擴充功能」 ➔ 「Apps Script」</strong>。</li>
                       <li>將裡面的程式碼全部刪除，並貼上下方的程式碼。</li>
                       <li>點選右上方 <strong>「部署」 ➔ 「新增部署」</strong>。</li>
@@ -1357,9 +1401,9 @@ function doPost(e) {
                       <button
                         type="button"
                         onClick={() => fallbackCopy(gasScriptCode)}
-                        className="w-full py-2 px-3 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-amber-500/30 active:scale-95 cursor-pointer"
+                        className="w-full py-2.5 px-3 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-amber-500/30 active:scale-95 cursor-pointer"
                       >
-                        <Copy className="w-3.5 h-3.5" />
+                        <Copy className="w-4 h-4" />
                         <span>複製 Google Apps Script 程式碼</span>
                       </button>
                     </div>
@@ -1370,7 +1414,7 @@ function doPost(e) {
 
             {/* 傳統全表一鍵複製卡片 */}
             <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-lg space-y-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm">
+              <div className="flex items-center gap-2 text-white font-bold text-base">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
                 <span>全表整批備份匯出</span>
               </div>
@@ -1381,7 +1425,7 @@ function doPost(e) {
               <button
                 type="button"
                 onClick={handleCopyForGoogleSheet}
-                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 cursor-pointer"
+                className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 cursor-pointer"
               >
                 <Copy className="w-4 h-4" />
                 <span>一鍵複製全表 (直接貼入 Google Sheet)</span>
@@ -1393,24 +1437,24 @@ function doPost(e) {
               <span className="text-xs font-bold text-slate-300">📊 當前代購行李與金流統計</span>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">總訂單筆數</div>
-                  <div className="text-sm font-bold font-mono text-white">{orders.length} 筆</div>
+                  <div className="text-xs text-slate-400">總訂單筆數</div>
+                  <div className="text-base font-bold font-mono text-white">{orders.length} 筆</div>
                 </div>
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">陀螺總顆數 (行李體積)</div>
-                  <div className="text-sm font-bold font-mono text-indigo-400">
+                  <div className="text-xs text-slate-400">陀螺總顆數 (行李體積)</div>
+                  <div className="text-base font-bold font-mono text-indigo-400">
                     {orders.reduce((s: number, o: any) => s + o.totalCount, 0)} 顆
                   </div>
                 </div>
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">已收取訂金總額</div>
-                  <div className="text-sm font-bold font-mono text-amber-400">
+                  <div className="text-xs text-slate-400">已收取訂金總額</div>
+                  <div className="text-base font-bold font-mono text-amber-400">
                     NT$ {orders.reduce((s: number, o: any) => s + o.depositPaid, 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">預計賣貨便尾款總額</div>
-                  <div className="text-sm font-bold font-mono text-rose-400">
+                  <div className="text-xs text-slate-400">預計賣貨便尾款總額</div>
+                  <div className="text-base font-bold font-mono text-rose-400">
                     NT$ {orders.reduce((s: number, o: any) => s + o.remainingCod, 0).toLocaleString()}
                   </div>
                 </div>
@@ -1436,7 +1480,7 @@ function doPost(e) {
             }`}
           >
             <Plus className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px]">快速下單</span>
+            <span className="text-xs">快速下單</span>
           </button>
 
           {/* 2. 訂單清單 */}
@@ -1450,9 +1494,9 @@ function doPost(e) {
             }`}
           >
             <Layers className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px]">訂單清單</span>
+            <span className="text-xs">訂單清單</span>
             {orders.length > 0 && (
-              <span className="absolute top-1 right-3 bg-indigo-500 text-white font-mono text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+              <span className="absolute top-1 right-2.5 bg-indigo-500 text-white font-mono text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
                 {orders.length}
               </span>
             )}
@@ -1469,7 +1513,7 @@ function doPost(e) {
             }`}
           >
             <Table className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px]">定價管理</span>
+            <span className="text-xs">定價管理</span>
           </button>
 
           {/* 4. 試算表同步 */}
@@ -1483,7 +1527,7 @@ function doPost(e) {
             }`}
           >
             <FileSpreadsheet className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px]">匯出同步</span>
+            <span className="text-xs">匯出同步</span>
           </button>
         </div>
       </nav>
