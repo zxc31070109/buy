@@ -1545,6 +1545,50 @@ function doPost(e) {
                     </div>
                   </div>
                 </div>
+
+                {/* 📊 線上 Google 試算表 (Excel) 網址卡片 (分頁最下方) */}
+                <div className="bg-gradient-to-br from-emerald-900/50 via-slate-800 to-slate-800 rounded-2xl p-4 border border-emerald-500/60 shadow-xl space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white font-bold text-base">
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                      <span>線上 Google 試算表 (Excel) 網址</span>
+                    </div>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                      雲端資料表
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    點擊下方按鈕可直接開啟或複製您線上實時對帳與寫入的 Google 試算表：
+                  </p>
+
+                  <div className="bg-slate-900/90 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono text-emerald-300 truncate flex-1">
+                      https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fallbackCopy('https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing');
+                        showToast('📋 已複製 Google 試算表網址');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 active:scale-95 cursor-pointer border border-slate-700 whitespace-nowrap"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>複製</span>
+                    </button>
+                  </div>
+
+                  <a
+                    href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 border border-emerald-400/30 cursor-pointer transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>點此開啟線上 Google 試算表 (Excel)</span>
+                  </a>
+                </div>
               </div>
             )}
           </main>

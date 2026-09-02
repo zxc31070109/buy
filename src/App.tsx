@@ -1377,20 +1377,49 @@ function doPost(e) {
         {/* ========================================================= */}
         {currentTab === 'sync' && (
           <div className="space-y-4 animate-fadeIn">
-            {/* 📊 線上 Google 試算表 (Excel) 專用連結卡片 */}
+            {/* 統計面板摘要 */}
+            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700 space-y-2">
+              <span className="text-xs font-bold text-slate-300">📊 當前代購行李與金流統計</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400">總訂單筆數</div>
+                  <div className="text-base font-bold font-mono text-white">{orders.length} 筆</div>
+                </div>
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400">陀螺總顆數 (行李體積)</div>
+                  <div className="text-base font-bold font-mono text-indigo-400">
+                    {orders.reduce((s: number, o: any) => s + o.totalCount, 0)} 顆
+                  </div>
+                </div>
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400">已收取訂金總額</div>
+                  <div className="text-base font-bold font-mono text-amber-400">
+                    NT$ {orders.reduce((s: number, o: any) => s + o.depositPaid, 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400">預計賣貨便尾款總額</div>
+                  <div className="text-base font-bold font-mono text-rose-400">
+                    NT$ {orders.reduce((s: number, o: any) => s + o.remainingCod, 0).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 📊 線上 Google 試算表 (Excel) 網址卡片 (分頁最下方) */}
             <div className="bg-gradient-to-br from-emerald-900/50 via-slate-800 to-slate-800 rounded-2xl p-4 border border-emerald-500/60 shadow-xl space-y-3.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-white font-bold text-base">
                   <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-                  <span>線上 Google 試算表 (Excel)</span>
+                  <span>線上 Google 試算表 (Excel) 網址</span>
                 </div>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
-                  即時寫入・線上檢視
+                  雲端資料表
                 </span>
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed">
-                點擊下方按鈕可直接開啟您的 Google 試算表，即時查看、管理與導出所有代購訂單紀錄：
+                點擊下方按鈕可直接開啟或複製您線上實時對帳與寫入的 Google 試算表：
               </p>
 
               <div className="bg-slate-900/90 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between gap-2">
@@ -1419,181 +1448,6 @@ function doPost(e) {
                 <ExternalLink className="w-4 h-4" />
                 <span>點此開啟線上 Google 試算表 (Excel)</span>
               </a>
-            </div>
-
-            {/* 🔥 Google Apps Script Webhook 自動同步卡片 */}
-            <div className="bg-slate-800/95 rounded-2xl p-4 border border-indigo-500/50 shadow-xl space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white font-bold text-base">
-                  <Zap className="w-5 h-5 text-amber-400 fill-amber-400" />
-                  <span>Google 試算表自動同步 (Webhook)</span>
-                </div>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
-                  免貼上・即時寫入
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-300 leading-relaxed">
-                設定 Google Apps Script 網頁應用程式網址後，按下<strong>「立即送出並記錄訂單」</strong>就會自動在 Google 試算表新增一列資料！
-              </p>
-
-              <div>
-                <label className="block text-xs text-slate-400 mb-1 font-semibold">
-                  Google Apps Script Webhook 網址
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="https://script.google.com/macros/s/.../exec"
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
-                  />
-                  {webhookUrl !== DEFAULT_WEBHOOK_URL && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWebhookUrl(DEFAULT_WEBHOOK_URL);
-                        showToast('已重置為最新預設 Webhook 網址');
-                      }}
-                      className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs hover:bg-amber-500/30 active:scale-95 cursor-pointer font-medium whitespace-nowrap"
-                    >
-                      重置網址
-                    </button>
-                  )}
-                  {webhookUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWebhookUrl('');
-                        showToast('已清除 Webhook 網址');
-                      }}
-                      className="px-3 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 active:scale-95 cursor-pointer whitespace-nowrap"
-                    >
-                      清除
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 測試同步按鈕 */}
-              <button
-                type="button"
-                onClick={handleTestWebhook}
-                disabled={isTestingWebhook}
-                className="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-indigo-400/30 shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
-              >
-                <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                <span>{isTestingWebhook ? '測試連線中...' : '🧪 點我測試寫入 1 筆資料至 Google 試算表'}</span>
-              </button>
-
-              {/* 自動寫入開關 */}
-              <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
-                <span className="text-xs text-slate-300 font-medium">送出訂單時自動同步寫入</span>
-                <button
-                  type="button"
-                  onClick={() => setAutoSync(!autoSync)}
-                  className={`w-12 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${
-                    autoSync ? 'bg-emerald-500' : 'bg-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                      autoSync ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* 教學展開按鈕 */}
-              <div className="pt-2 border-t border-slate-700/60">
-                <button
-                  type="button"
-                  onClick={() => setShowGasTutorial(!showGasTutorial)}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-900/90 text-amber-300 text-xs font-semibold flex items-center justify-between hover:bg-slate-900 border border-slate-700 cursor-pointer"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>查看 1 分鐘 Google 試算表自動寫入設定教學</span>
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showGasTutorial ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showGasTutorial && (
-                  <div className="mt-3 p-3 rounded-xl bg-slate-900/95 border border-slate-700 space-y-2.5 text-xs text-slate-300 animate-fadeIn">
-                    <div className="font-bold text-white text-xs">🛠️ 1 分鐘 Google 試算表設定步驟：</div>
-                    <ol className="list-decimal list-inside space-y-1.5 text-xs text-slate-300 leading-relaxed">
-                      <li>開啟您的 <a href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing" target="_blank" rel="noreferrer" className="text-amber-400 underline font-bold">Google 試算表</a>。</li>
-                      <li>點選上方選單 <strong>「擴充功能」 ➔ 「Apps Script」</strong>。</li>
-                      <li>將裡面的程式碼全部刪除，並貼上下方的程式碼。</li>
-                      <li>點選右上方 <strong>「部署」 ➔ 「新增部署」</strong>。</li>
-                      <li>類型選擇 <strong>「網頁應用程式 (Web App)」</strong>。</li>
-                      <li>執行身份選 <strong>「我 (Me)」</strong>，誰有存取權選 <strong>「所有人 (Anyone)」</strong>。</li>
-                      <li>點選「部署」授權後，複製產生的 <strong>網頁應用程式網址 (URL)</strong> 並貼到上方的輸入框即可！</li>
-                    </ol>
-
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={() => fallbackCopy(gasScriptCode)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-amber-500/30 active:scale-95 cursor-pointer"
-                      >
-                        <Copy className="w-4 h-4" />
-                        <span>複製 Google Apps Script 程式碼</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 傳統全表一鍵複製卡片 */}
-            <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-lg space-y-3">
-              <div className="flex items-center gap-2 text-white font-bold text-base">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-                <span>全表整批備份匯出</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                若需一次複製全部歷史訂單全表內容，可點擊下方一鍵複製手動貼入 Google Sheet：
-              </p>
-
-              <button
-                type="button"
-                onClick={handleCopyForGoogleSheet}
-                className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 cursor-pointer"
-              >
-                <Copy className="w-4 h-4" />
-                <span>一鍵複製全表 (直接貼入 Google Sheet)</span>
-              </button>
-            </div>
-
-            {/* 統計面板摘要 */}
-            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700 space-y-2">
-              <span className="text-xs font-bold text-slate-300">📊 當前代購行李與金流統計</span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-xs text-slate-400">總訂單筆數</div>
-                  <div className="text-base font-bold font-mono text-white">{orders.length} 筆</div>
-                </div>
-                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-xs text-slate-400">陀螺總顆數 (行李體積)</div>
-                  <div className="text-base font-bold font-mono text-indigo-400">
-                    {orders.reduce((s: number, o: any) => s + o.totalCount, 0)} 顆
-                  </div>
-                </div>
-                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-xs text-slate-400">已收取訂金總額</div>
-                  <div className="text-base font-bold font-mono text-amber-400">
-                    NT$ {orders.reduce((s: number, o: any) => s + o.depositPaid, 0).toLocaleString()}
-                  </div>
-                </div>
-                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-xs text-slate-400">預計賣貨便尾款總額</div>
-                  <div className="text-base font-bold font-mono text-rose-400">
-                    NT$ {orders.reduce((s: number, o: any) => s + o.remainingCod, 0).toLocaleString()}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
