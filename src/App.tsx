@@ -115,6 +115,8 @@ export default function App() {
   });
 
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   const [autoSync, setAutoSync] = useState(() => {
     return localStorage.getItem('hk_beyblade_auto_sync') !== 'false';
@@ -145,6 +147,56 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 2500);
   };
+
+  // 從 Google Apps Script Webhook 即時讀取線上 Google 試算表訂單
+  const fetchOrdersFromGoogleSheet = async (showToastNotice = true) => {
+    if (!webhookUrl.trim()) {
+      if (showToastNotice) showToast('⚠️ 請先設定 Webhook 網址！');
+      return false;
+    }
+
+    setIsLoadingOrders(true);
+    try {
+      const response = await fetch(webhookUrl.trim());
+      const text = await response.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        // GAS 返回非 JSON 格式
+      }
+
+      if (data && data.status === 'success' && Array.isArray(data.orders)) {
+        if (data.orders.length > 0) {
+          setOrders(data.orders);
+          setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+          if (showToastNotice) {
+            showToast(`✅ 已成功從 Google 試算表載入 ${data.orders.length} 筆最新訂單！`);
+          }
+        } else {
+          if (showToastNotice) showToast('ℹ️ Google 試算表目前尚無訂單紀錄');
+        }
+        setIsLoadingOrders(false);
+        return true;
+      } else {
+        if (showToastNotice) {
+          showToast('⚠️ 試算表未回傳訂單資料，請確認 GAS 是否已部署最新腳本');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch orders from Google Sheet:', err);
+      if (showToastNotice) showToast('❌ 連線試算表失敗，顯示本地緩存資料');
+    }
+    setIsLoadingOrders(false);
+    return false;
+  };
+
+  // 切換到「訂單清單」頁面時自動從雲端 Google 試算表拉取最新數據
+  useEffect(() => {
+    if (currentTab === 'orders' && webhookUrl.trim()) {
+      fetchOrdersFromGoogleSheet(false);
+    }
+  }, [currentTab, webhookUrl]);
 
   // 自動發送 single order 到 Google Apps Script Webhook
   const sendOrderToWebhook = async (order: any) => {
@@ -517,7 +569,59 @@ export default function App() {
   };
 
   const gasScriptCode = `function doGet(e) {
-  return ContentService.createTextOutput("Google Apps Script Webhook 運作正常！");
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var rows = sheet.getDataRange().getValues();
+    var orders = [];
+    
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (!row[1] || String(row[1]).trim() === '' || String(row[1]).indexOf('訂單編號') !== -1) continue;
+
+      var itemsStr = String(row[3] || '');
+      var items = [];
+      if (itemsStr) {
+        var parts = itemsStr.split(',');
+        for (var j = 0; j < parts.length; j++) {
+          var p = parts[j].trim();
+          var match = p.match(/^(.+)\*(\d+)$/);
+          if (match) {
+            items.push({ code: match[1].trim(), qty: parseInt(match[2], 10), price: 0 });
+          } else if (p) {
+            items.push({ code: p, qty: 1, price: 0 });
+          }
+        }
+      }
+
+      var bankLast5 = String(row[8] || '').replace(/^'/, '');
+
+      orders.push({
+        id: String(row[1] || ''),
+        lineName: String(row[2] || ''),
+        items: items,
+        totalCount: Number(row[4]) || 0,
+        boxOption: String(row[5] || '可拆盒'),
+        purchaseStatus: String(row[6] || '已採買'),
+        depositPaid: Number(row[7]) || 0,
+        bankLast5: bankLast5,
+        depositStatus: String(row[9] || '已入帳'),
+        totalAmount: Number(row[10]) || 0,
+        remainingCod: Number(row[11]) || 0,
+        myshipCode: String(row[12] || ''),
+        myshipStatus: String(row[13] || ''),
+        shippingStatus: String(row[14] || ''),
+        refundAccount: String(row[15] || ''),
+        note: String(row[16] || ''),
+        createdAt: String(row[17] || '')
+      });
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", orders: orders }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doPost(e) {
@@ -943,7 +1047,35 @@ function doPost(e) {
         {/* TAB 2: 訂單清單與 LINE 一鍵回覆                            */}
         {/* ========================================================= */}
         {currentTab === 'orders' && (
-          <div className="space-y-3 animate-fadeIn">
+          <div className="space-y-3.5 animate-fadeIn">
+            {/* ☁️ 雲端試算表即時連線控制列 */}
+            <div className="bg-slate-800/90 rounded-2xl p-3 border border-emerald-500/40 shadow-lg flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping flex-shrink-0"></div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
+                    <span>Google 試算表實時數據</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                      LIVE
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 truncate">
+                    {lastSyncTime ? `上次更新時間: ${lastSyncTime}` : '雲端同步中，直接呈現線上資料'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => fetchOrdersFromGoogleSheet(true)}
+                disabled={isLoadingOrders}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/30 disabled:opacity-50 cursor-pointer border border-emerald-400/30 whitespace-nowrap flex-shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingOrders ? 'animate-spin' : ''}`} />
+                <span>{isLoadingOrders ? '刷新中...' : '重新刷新'}</span>
+              </button>
+            </div>
+
             {/* 搜尋與篩選列 */}
             <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700 space-y-2">
               <div className="relative">
