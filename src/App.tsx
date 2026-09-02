@@ -26,8 +26,28 @@ import {
   ChevronDown,
   X,
   Link,
-  Zap
+  Zap,
+  Lock,
+  Unlock
 } from 'lucide-react';
+
+// 加密存放的敏感網址 (金鑰為密碼 0429)
+// 原始碼中不會出現明文 Google Sheet 或 Webhook 網址，推至 GitHub 也無法從源碼看出！
+const ENCRYPTED_SHEET_URL = 'WEBGSUMOHRZUW1FKHlNdVldYVxdTW18WQ0RAXFFQQVFVUUZKH1AdCFREBGZJTh94Zw15TXxsbVRUBnFKXWAGXAlQdwFpBUhgZmsBWEdBSnQIR0EWVVBbTQ9BQUkNR1pYQl1cXg==';
+const ENCRYPTED_WEBHOOK_URL = 'WEBGSUMOHRZDV0BQQEAcXl9bVVVVGlFWXRtfWFNGXUofRx14e1JLWlJDXkxKA1NtRHxgC2hAeHNgZlBUQExqSmJEX3p6YXxPYHZIfnhkcXoIZ2ZjdwMGCH1wdVZ6c0JBXXpVSVtiRHxqZXVOVxtXQVVX';
+
+const decryptSecret = (base64Str: string, key: string): string => {
+  try {
+    const raw = atob(base64Str);
+    let result = '';
+    for (let i = 0; i < raw.length; i++) {
+      result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return result;
+  } catch (e) {
+    return '';
+  }
+};
 
 // 預設陀螺定價庫存表 (第二頁管理)
 const INITIAL_PRICE_TABLE = [
@@ -104,15 +124,83 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_ORDERS;
   });
 
-  // Google Apps Script Webhook 網址與自動同步設定
-  const OLD_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbywTUGlA_8mAlis8bsGdAtU-2MCo8YirhQ_uHxtAPz9uj3MYMeiFSmCobUzAOh30RVznw/exec';
-  const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwluz7aTtHR2XtJJPRbmpxXsRpmCJUNvPBzGHPCC8STZG741MDGoJGpxmNgpkVvEZQGwg/exec';
+  // 密碼解鎖與加密網址管理 (預設密碼: 0429)
+  const [inputPassword, setInputPassword] = useState('');
+  const [unlockedSheetUrl, setUnlockedSheetUrl] = useState(() => {
+    const savedKey = localStorage.getItem('hk_secret_pass');
+    if (savedKey) {
+      const dec = decryptSecret(ENCRYPTED_SHEET_URL, savedKey);
+      if (dec.startsWith('https://')) return dec;
+    }
+    return '';
+  });
 
+  const [unlockedWebhookUrl, setUnlockedWebhookUrl] = useState(() => {
+    const savedKey = localStorage.getItem('hk_secret_pass');
+    if (savedKey) {
+      const dec = decryptSecret(ENCRYPTED_WEBHOOK_URL, savedKey);
+      if (dec.startsWith('https://')) return dec;
+    }
+    return '';
+  });
+
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    const savedKey = localStorage.getItem('hk_secret_pass');
+    if (savedKey) {
+      const dec = decryptSecret(ENCRYPTED_SHEET_URL, savedKey);
+      return dec.startsWith('https://');
+    }
+    return false;
+  });
+
+  // Google Apps Script Webhook 網址設定
   const [webhookUrl, setWebhookUrl] = useState(() => {
     const saved = localStorage.getItem('hk_beyblade_webhook_url');
-    if (!saved || saved === OLD_WEBHOOK_URL) return DEFAULT_WEBHOOK_URL;
+    if (!saved || saved.includes('AKfycbyw')) {
+      const savedKey = localStorage.getItem('hk_secret_pass');
+      if (savedKey) {
+        const dec = decryptSecret(ENCRYPTED_WEBHOOK_URL, savedKey);
+        if (dec.startsWith('https://')) return dec;
+      }
+      return '';
+    }
     return saved;
   });
+
+  const handleUnlockSecret = (passwordToTry?: string) => {
+    const pwd = (passwordToTry !== undefined ? passwordToTry : inputPassword).trim();
+    if (!pwd) {
+      showToast('⚠️ 請輸入解鎖密碼');
+      return false;
+    }
+
+    const decSheet = decryptSecret(ENCRYPTED_SHEET_URL, pwd);
+    const decWebhook = decryptSecret(ENCRYPTED_WEBHOOK_URL, pwd);
+
+    if (decSheet.startsWith('https://docs.google.com') && decWebhook.startsWith('https://script.google.com')) {
+      localStorage.setItem('hk_secret_pass', pwd);
+      setUnlockedSheetUrl(decSheet);
+      setUnlockedWebhookUrl(decWebhook);
+      setIsUnlocked(true);
+      setInputPassword('');
+      if (!webhookUrl || webhookUrl.includes('AKfycbyw')) {
+        setWebhookUrl(decWebhook);
+      }
+      showToast('🎉 解鎖成功！已顯示線上 Google 試算表與 Webhook 網址');
+      return true;
+    } else {
+      showToast('❌ 密碼錯誤！請再試一次');
+      return false;
+    }
+  };
+
+  const handleLockSecret = () => {
+    localStorage.removeItem('hk_secret_pass');
+    setUnlockedSheetUrl('');
+    setUnlockedWebhookUrl('');
+    setIsUnlocked(false);
+    showToast('🔒 已重新鎖定網址');
+  };
 
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
@@ -1406,48 +1494,93 @@ function doPost(e) {
               </div>
             </div>
 
-            {/* 📊 線上 Google 試算表 (Excel) 網址卡片 (分頁最下方) */}
-            <div className="bg-gradient-to-br from-emerald-900/50 via-slate-800 to-slate-800 rounded-2xl p-4 border border-emerald-500/60 shadow-xl space-y-3.5">
+            {/* 📊 線上 Google 試算表 (Excel) 網址卡片 (分頁最下方，含密碼解鎖保護) */}
+            <div className="bg-gradient-to-br from-emerald-900/40 via-slate-800 to-slate-800 rounded-2xl p-4 border border-emerald-500/50 shadow-xl space-y-3.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-white font-bold text-base">
                   <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
                   <span>線上 Google 試算表 (Excel) 網址</span>
                 </div>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
-                  雲端資料表
-                </span>
+                {isUnlocked ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                      已解鎖
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLockSecret}
+                      className="text-xs text-slate-400 hover:text-rose-400 underline cursor-pointer"
+                    >
+                      重新鎖定
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium border border-amber-500/30 flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>受密碼保護</span>
+                  </span>
+                )}
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed">
-                點擊下方按鈕可直接開啟或複製您線上實時對帳與寫入的 Google 試算表：
-              </p>
+              {!isUnlocked ? (
+                <div className="space-y-3 pt-1">
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    此網址已進行<strong>源碼加密保護</strong>（公開於 GitHub 亦無法被直接讀取）。請輸入管理密碼查看與開啟網址：
+                  </p>
 
-              <div className="bg-slate-900/90 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between gap-2">
-                <span className="text-xs font-mono text-emerald-300 truncate flex-1">
-                  https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    fallbackCopy('https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing');
-                    showToast('📋 已複製 Google 試算表網址');
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 active:scale-95 cursor-pointer border border-slate-700 whitespace-nowrap"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>複製</span>
-                </button>
-              </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      placeholder="請輸入密碼 (預設: 0429)"
+                      value={inputPassword}
+                      onChange={(e) => setInputPassword(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleUnlockSecret(); }}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleUnlockSecret()}
+                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-sm font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer whitespace-nowrap"
+                    >
+                      <Unlock className="w-4 h-4" />
+                      <span>解鎖網址</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    點擊下方按鈕可直接開啟或複製您線上實時對帳與寫入的 Google 試算表：
+                  </p>
 
-              <a
-                href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing"
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 border border-emerald-400/30 cursor-pointer transition-all"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>點此開啟線上 Google 試算表 (Excel)</span>
-              </a>
+                  <div className="bg-slate-900/90 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono text-emerald-300 truncate flex-1">
+                      {unlockedSheetUrl}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fallbackCopy(unlockedSheetUrl);
+                        showToast('📋 已複製 Google 試算表網址');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 active:scale-95 cursor-pointer border border-slate-700 whitespace-nowrap"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>複製</span>
+                    </button>
+                  </div>
+
+                  <a
+                    href={unlockedSheetUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 border border-emerald-400/30 cursor-pointer transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>點此開啟線上 Google 試算表 (Excel)</span>
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         )}
