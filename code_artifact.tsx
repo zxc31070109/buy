@@ -1,0 +1,1204 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  ShoppingBag,
+  Plus,
+  Minus,
+  Trash2,
+  Edit3,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Copy,
+  Check,
+  Search,
+  Filter,
+  RefreshCw,
+  Table,
+  FileSpreadsheet,
+  Layers,
+  Settings,
+  ArrowRight,
+  ExternalLink,
+  DollarSign,
+  Package,
+  Send,
+  Sparkles,
+  ChevronDown,
+  X
+} from 'lucide-react';
+
+// 預設陀螺定價庫存表 (第二頁管理)
+const INITIAL_PRICE_TABLE = [
+  { id: '1', code: 'CX14', name: 'CX-14 鋼鐵戰龍 (烈火版)', priceTWD: 750, category: 'CX系列', note: '熱門限定款' },
+  { id: '2', code: 'BX40', name: 'BX-40 暴風天馬 X', priceTWD: 680, category: 'BX系列', note: '主打款' },
+  { id: '3', code: 'UX20', name: 'UX-20 終極武神 進化型', priceTWD: 720, category: 'UX系列', note: '附特殊軸心' },
+  { id: '4', code: 'BX35', name: 'BX-35 隨機強化包 (抽包)', priceTWD: 320, category: 'BX系列', note: '隨機1入' },
+  { id: '5', code: 'BX36', name: 'BX-36 抽包全套 (6入)', priceTWD: 1900, category: 'BX系列', note: '整盒預訂' },
+  { id: '6', code: 'UX01', name: 'UX-01 蒼穹獵鷹 啟動組', priceTWD: 850, category: 'UX系列', note: '含發射器' },
+  { id: '7', code: 'ACC01', name: '拉線式加重發射器 (黑金)', priceTWD: 450, category: '配件', note: '通用握把' }
+];
+
+// 預設示範訂單
+const INITIAL_ORDERS = [
+  {
+    id: 'HK-001',
+    lineName: '小明 (台北戰友)',
+    items: [
+      { code: 'BX40', qty: 2, price: 680 },
+      { code: 'UX20', qty: 1, price: 720 }
+    ],
+    totalCount: 3,
+    boxOption: '可拆盒', // 可拆盒 | 保留外盒 | 壓盒帶回
+    purchaseStatus: '已採買', // 已採買 | 部分缺貨 | 缺貨待退
+    depositPerUnit: 300,
+    depositPaid: 900,
+    depositStatus: '已入帳', // 未匯款 | 已匯待對 | 已入帳
+    bankLast5: '12345',
+    totalAmount: 2080,
+    remainingCod: 1180,
+    myshipStatus: '待開賣場', // 待開賣場 | 已開賣場 | 已下單 | 免開賣場
+    myshipCode: '',
+    shippingStatus: '待出貨', // 待出貨 | 已寄出 | 已取貨 | 已退款
+    refundAccount: '',
+    note: '可拆盒省空間，優先挑八角完整',
+    createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  },
+  {
+    id: 'HK-002',
+    lineName: '阿華 (陀螺隊長)',
+    items: [
+      { code: 'CX14', qty: 1, price: 750 }
+    ],
+    totalCount: 1,
+    boxOption: '保留外盒',
+    purchaseStatus: '缺貨待退',
+    depositPerUnit: 300,
+    depositPaid: 300,
+    depositStatus: '已入帳',
+    bankLast5: '67890',
+    totalAmount: 750,
+    remainingCod: 0,
+    myshipStatus: '免開賣場',
+    myshipCode: '',
+    shippingStatus: '已退款',
+    refundAccount: '822 中信 123456789012',
+    note: '現場逛兩家均缺貨，已退回訂金',
+    createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+];
+
+export default function App() {
+  // Tab 狀態: 'form' (下單), 'orders' (清單), 'pricing' (定價庫), 'sync' (同步設定)
+  const [currentTab, setCurrentTab] = useState('form');
+
+  // 資料狀態
+  const [priceTable, setPriceTable] = useState(INITIAL_PRICE_TABLE);
+  const [orders, setOrders] = useState(INITIAL_ORDERS);
+
+  // 提示訊息 Notification
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 2500);
+  };
+
+  // -------------------------------------------------------------
+  // 第一頁：新增訂單表單狀態 (Draft)
+  // -------------------------------------------------------------
+  const nextOrderNumber = useMemo(() => {
+    const maxNum = orders.reduce((max, order) => {
+      const match = order.id.match(/HK-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    return `HK-${String(maxNum + 1).padStart(3, '0')}`;
+  }, [orders]);
+
+  const [formOrderId, setFormOrderId] = useState(nextOrderNumber);
+  const [lineName, setLineName] = useState('');
+  const [selectedItems, setSelectedItems] = useState([]); // [{ code, qty, price, customName }]
+  const [customCodeInput, setCustomCodeInput] = useState('');
+  const [customPriceInput, setCustomPriceInput] = useState('');
+  const [boxOption, setBoxOption] = useState('可拆盒');
+  const [purchaseStatus, setPurchaseStatus] = useState('已採買');
+  const [depositPerUnit, setDepositPerUnit] = useState(300);
+  const [depositStatus, setDepositStatus] = useState('已入帳');
+  const [bankLast5, setBankLast5] = useState('');
+  const [refundAccount, setRefundAccount] = useState('');
+  const [note, setNote] = useState('');
+  const [editingOrderId, setEditingOrderId] = useState(null);
+
+  // 當 orders 變動時同步下一號訂單編號
+  useEffect(() => {
+    if (!editingOrderId) {
+      setFormOrderId(nextOrderNumber);
+    }
+  }, [nextOrderNumber, editingOrderId]);
+
+  // 自動計算總顆數、訂金與代購總價
+  const totalCount = useMemo(() => {
+    return selectedItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  }, [selectedItems]);
+
+  const totalAmount = useMemo(() => {
+    return selectedItems.reduce((sum, item) => sum + ((Number(item.qty) || 0) * (Number(item.price) || 0)), 0);
+  }, [selectedItems]);
+
+  const depositExpected = totalCount * depositPerUnit;
+  const remainingCod = Math.max(0, totalAmount - depositExpected);
+
+  // 加入/增加型號
+  const handleAddItemFromPriceTable = (item) => {
+    setSelectedItems(prev => {
+      const existing = prev.find(i => i.code === item.code);
+      if (existing) {
+        return prev.map(i => i.code === item.code ? { ...i, qty: i.qty + 1 } : i);
+      } else {
+        return [...prev, { code: item.code, qty: 1, price: item.priceTWD, name: item.name }];
+      }
+    });
+  };
+
+  // 增減數量
+  const handleUpdateQty = (code, delta) => {
+    setSelectedItems(prev => {
+      return prev
+        .map(i => {
+          if (i.code === code) {
+            const newQty = i.qty + delta;
+            return newQty > 0 ? { ...i, qty: newQty } : null;
+          }
+          return i;
+        })
+        .filter(Boolean);
+    });
+  };
+
+  // 新增自訂型號（若定價庫沒有）
+  const handleAddCustomItem = () => {
+    if (!customCodeInput.trim()) return;
+    const price = Number(customPriceInput) || 650;
+    const upperCode = customCodeInput.trim().toUpperCase();
+
+    setSelectedItems(prev => {
+      const existing = prev.find(i => i.code === upperCode);
+      if (existing) {
+        return prev.map(i => i.code === upperCode ? { ...i, qty: i.qty + 1 } : i);
+      } else {
+        return [...prev, { code: upperCode, qty: 1, price: price, name: upperCode }];
+      }
+    });
+
+    setCustomCodeInput('');
+    setCustomPriceInput('');
+  };
+
+  // 重設表單
+  const handleResetForm = () => {
+    setEditingOrderId(null);
+    setFormOrderId(nextOrderNumber);
+    setLineName('');
+    setSelectedItems([]);
+    setBoxOption('可拆盒');
+    setPurchaseStatus('已採買');
+    setDepositStatus('已入帳');
+    setBankLast5('');
+    setRefundAccount('');
+    setNote('');
+  };
+
+  // 儲存/更新訂單
+  const handleSaveOrder = () => {
+    if (!lineName.trim()) {
+      showToast('⚠️ 請輸入 LINE 名稱/暱稱');
+      return;
+    }
+    if (selectedItems.length === 0) {
+      showToast('⚠️ 請至少選擇或輸入 1 款陀螺型號');
+      return;
+    }
+
+    const newOrder = {
+      id: editingOrderId || formOrderId,
+      lineName: lineName.trim(),
+      items: selectedItems,
+      totalCount,
+      boxOption,
+      purchaseStatus,
+      depositPerUnit,
+      depositPaid: depositExpected,
+      depositStatus,
+      bankLast5: bankLast5.trim(),
+      totalAmount,
+      remainingCod,
+      myshipStatus: purchaseStatus === '缺貨待退' ? '免開賣場' : '待開賣場',
+      myshipCode: '',
+      shippingStatus: purchaseStatus === '缺貨待退' ? '已退款' : '待出貨',
+      refundAccount: refundAccount.trim(),
+      note: note.trim(),
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    if (editingOrderId) {
+      setOrders(prev => prev.map(o => o.id === editingOrderId ? newOrder : o));
+      showToast(`✅ 訂單 ${editingOrderId} 更新成功！`);
+    } else {
+      setOrders(prev => [newOrder, ...prev]);
+      showToast(`🎉 訂單 ${newOrder.id} 新增成功！`);
+    }
+
+    handleResetForm();
+    setCurrentTab('orders'); // 送出後跳至訂單列表方便核對
+  };
+
+  // 載入訂單進入編輯模式
+  const handleStartEditOrder = (order) => {
+    setEditingOrderId(order.id);
+    setFormOrderId(order.id);
+    setLineName(order.lineName);
+    setSelectedItems(order.items || []);
+    setBoxOption(order.boxOption || '可拆盒');
+    setPurchaseStatus(order.purchaseStatus || '已採買');
+    setDepositPerUnit(order.depositPerUnit || 300);
+    setDepositStatus(order.depositStatus || '已入帳');
+    setBankLast5(order.bankLast5 || '');
+    setRefundAccount(order.refundAccount || '');
+    setNote(order.note || '');
+    setCurrentTab('form');
+  };
+
+  // 刪除訂單
+  const handleDeleteOrder = (id) => {
+    if (confirm(`確定要刪除訂單 ${id} 嗎？`)) {
+      setOrders(prev => prev.filter(o => o.id !== id));
+      showToast(`🗑️ 訂單 ${id} 已刪除`);
+    }
+  };
+
+  // 一鍵複製 LINE 喊單確認文字
+  const handleCopyLineReply = (order) => {
+    const itemsText = order.items.map(i => `${i.code} × ${i.qty}`).join(', ');
+    const replyText = `【HK 香港陀螺連線代購確認單】
+👤 買家：${order.lineName}
+📋 單號：${order.id}
+🎯 購買明細：${itemsText} (共 ${order.totalCount} 顆)
+📦 盒況偏好：${order.boxOption}
+🛒 現場採買：${order.purchaseStatus}
+💰 訂金($${order.depositPerUnit}/顆)：$${order.depositPaid} 【${order.depositStatus}${order.bankLast5 ? ` 後5碼:${order.bankLast5}` : ''}】
+💵 代購總金額：NT$ ${order.totalAmount.toLocaleString()}
+🏷️ 賣貨便尾款：NT$ ${order.remainingCod.toLocaleString()} (+運費$38)
+📝 備註：${order.note || '無'}
+-------------------
+感謝跟單！回台後將儘速開立 7-11 賣貨便提供下單出貨 🚀`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(replyText).then(() => {
+        showToast('📋 已複製 LINE 回覆訊息！');
+      }).catch(() => {
+        fallbackCopy(replyText);
+      });
+    } else {
+      fallbackCopy(replyText);
+    }
+  };
+
+  const fallbackCopy = (text) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showToast('📋 已複製 LINE 回覆訊息！');
+    } catch (err) {
+      showToast('❌ 複製失敗，請手動複製');
+    }
+    document.body.removeChild(textArea);
+  };
+
+  // -------------------------------------------------------------
+  // 第二頁：陀螺定價管理 (Price Table) 狀態
+  // -------------------------------------------------------------
+  const [isAddingPriceItem, setIsAddingPriceItem] = useState(false);
+  const [newPriceCode, setNewPriceCode] = useState('');
+  const [newPriceName, setNewPriceName] = useState('');
+  const [newPriceTWD, setNewPriceTWD] = useState('');
+  const [newPriceCat, setNewPriceCat] = useState('BX系列');
+  const [newPriceNote, setNewPriceNote] = useState('');
+
+  const handleAddNewPriceItem = () => {
+    if (!newPriceCode.trim() || !newPriceTWD) {
+      showToast('⚠️ 請輸入型號代碼與台灣售價');
+      return;
+    }
+    const newItem = {
+      id: Date.now().toString(),
+      code: newPriceCode.trim().toUpperCase(),
+      name: newPriceName.trim() || newPriceCode.trim().toUpperCase(),
+      priceTWD: Number(newPriceTWD) || 600,
+      category: newPriceCat,
+      note: newPriceNote.trim()
+    };
+    setPriceTable(prev => [newItem, ...prev]);
+    setNewPriceCode('');
+    setNewPriceName('');
+    setNewPriceTWD('');
+    setNewPriceNote('');
+    setIsAddingPriceItem(false);
+    showToast(`✅ 已新增陀螺型號 ${newItem.code}`);
+  };
+
+  const handleDeletePriceItem = (id, code) => {
+    if (confirm(`確定要刪除型號 ${code} 嗎？`)) {
+      setPriceTable(prev => prev.filter(p => p.id !== id));
+      showToast(`已刪除型號 ${code}`);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 第三頁 / 同步：Google Sheets 複製與 Webhook 工具
+  // -------------------------------------------------------------
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // 匯出 TSV / CSV 供直接全選貼入 Google Sheet
+  const handleCopyForGoogleSheet = () => {
+    const headers = [
+      '序號', '訂單編號', 'LINE 名稱', '訂購品項與數量', '總顆數',
+      '盒況/拆盒需求', '現場採買狀況', '應收訂金', '匯款末五碼', '訂金核對',
+      '代購總金額 (TWD)', '賣貨便尾款 (TWD)', '賣貨便賣場代碼/連結',
+      '賣貨便下單狀態', '出貨狀態', '缺貨退款帳號', '備註'
+    ];
+
+    const rows = orders.map((o, idx) => {
+      const itemsStr = o.items.map(i => `${i.code}*${i.qty}`).join(', ');
+      return [
+        idx + 1,
+        o.id,
+        `"${o.lineName.replace(/"/g, '""')}"`,
+        `"${itemsStr}"`,
+        o.totalCount,
+        o.boxOption,
+        o.purchaseStatus,
+        o.depositPaid,
+        `'${o.bankLast5}`,
+        o.depositStatus,
+        o.totalAmount,
+        o.remainingCod,
+        `"${o.myshipCode || ''}"`,
+        o.myshipStatus,
+        o.shippingStatus,
+        `"${o.refundAccount || ''}"`,
+        `"${(o.note || '').replace(/"/g, '""')}"`
+      ].join('\t');
+    });
+
+    const tsvContent = [headers.join('\t'), ...rows].join('\n');
+
+    fallbackCopy(tsvContent);
+    showToast('📊 已複製全部訂單！可直接到 Google Sheet 貼上 (Ctrl+V / Cmd+V)');
+  };
+
+  // 搜尋與篩選狀態
+  const [orderSearchText, setOrderSearchText] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      const matchSearch =
+        o.lineName.toLowerCase().includes(orderSearchText.toLowerCase()) ||
+        o.id.toLowerCase().includes(orderSearchText.toLowerCase()) ||
+        o.items.some(i => i.code.toLowerCase().includes(orderSearchText.toLowerCase()));
+
+      if (!matchSearch) return false;
+      if (orderStatusFilter === 'ALL') return true;
+      if (orderStatusFilter === 'PAID') return o.depositStatus === '已入帳';
+      if (orderStatusFilter === 'UNPAID') return o.depositStatus === '未匯款' || o.depositStatus === '已匯待對';
+      if (orderStatusFilter === 'BOUGHT') return o.purchaseStatus === '已採買';
+      if (orderStatusFilter === 'OUT_OF_STOCK') return o.purchaseStatus === '缺貨待退';
+      return true;
+    });
+  }, [orders, orderSearchText, orderStatusFilter]);
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans pb-28 select-none antialiased">
+      {/* 頂部 iPhone 標題列 (含安全距離) */}
+      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 pt-3 pb-3">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-400 flex items-center justify-center shadow-lg shadow-rose-500/20">
+              <Sparkles className="w-4 h-4 text-white animate-pulse" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
+                香港陀螺連線代購
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-mono font-medium border border-rose-500/30">
+                  HK LIVE
+                </span>
+              </h1>
+              <p className="text-[11px] text-slate-400">iPhone 15 Pro 快速錄單助手</p>
+            </div>
+          </div>
+
+          {/* 總結計數 */}
+          <div className="text-right">
+            <div className="text-[11px] text-slate-400">總訂購 / 總額</div>
+            <div className="text-xs font-bold font-mono text-emerald-400">
+              {orders.reduce((s, o) => s + o.totalCount, 0)} 顆 · NT${orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* 浮動 Toast 提示 */}
+      {toastMessage && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-800/95 border border-slate-700 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 animate-bounce">
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* 主要內容分頁區域 */}
+      <main className="max-w-md mx-auto px-3 pt-3">
+        {/* ========================================================= */}
+        {/* TAB 1: 訂單快速填表 (iPhone 現場高速輸入)                 */}
+        {/* ========================================================= */}
+        {currentTab === 'form' && (
+          <div className="space-y-3.5 animate-fadeIn">
+            {/* 編輯中提示 */}
+            {editingOrderId && (
+              <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Edit3 className="w-3.5 h-3.5" /> 正在編輯訂單：<strong>{editingOrderId}</strong>
+                </span>
+                <button
+                  onClick={handleResetForm}
+                  className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[11px] hover:bg-amber-500/30"
+                >
+                  取消編輯
+                </button>
+              </div>
+            )}
+
+            {/* 1. 買家基本資訊卡片 */}
+            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-400"></span> 1. 買家與單號
+                </span>
+                <span className="text-xs font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                  {editingOrderId || formOrderId}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1">LINE 暱稱 / 買家識別</label>
+                <input
+                  type="text"
+                  placeholder="例如：小明、阿達 (可備註地區)"
+                  value={lineName}
+                  onChange={(e) => setLineName(e.target.value)}
+                  className="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+            </div>
+
+            {/* 2. 陀螺型號極速點選卡片 (核心亮點) */}
+            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-400"></span> 2. 點選陀螺型號 (快速加顆)
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  已選 <strong className="text-indigo-400">{totalCount}</strong> 顆
+                </span>
+              </div>
+
+              {/* 常用型號快速點擊晶片 (從定價表讀取) */}
+              <div className="flex flex-wrap gap-1.5">
+                {priceTable.map((item) => {
+                  const currentInCart = selectedItems.find(i => i.code === item.code);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleAddItemFromPriceTable(item)}
+                      className={`text-xs px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 transition-all active:scale-95 ${
+                        currentInCart
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 border border-indigo-400'
+                          : 'bg-slate-900/80 text-slate-300 border border-slate-700 hover:border-slate-500'
+                      }`}
+                    >
+                      <span>{item.code}</span>
+                      <span className="text-[10px] opacity-75 font-mono">(${item.priceTWD})</span>
+                      {currentInCart && (
+                        <span className="ml-1 bg-white text-indigo-900 rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
+                          {currentInCart.qty}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 現場臨時款快速輸入 */}
+              <div className="pt-2 border-t border-slate-700/60 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  placeholder="臨時型號 (如 BX99)"
+                  value={customCodeInput}
+                  onChange={(e) => setCustomCodeInput(e.target.value)}
+                  className="flex-1 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 uppercase"
+                />
+                <input
+                  type="number"
+                  placeholder="台幣價"
+                  value={customPriceInput}
+                  onChange={(e) => setCustomPriceInput(e.target.value)}
+                  className="w-20 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomItem}
+                  className="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-200 text-xs font-medium hover:bg-slate-600 active:scale-95"
+                >
+                  + 自訂
+                </button>
+              </div>
+
+              {/* 已選清單明細與數量調整 */}
+              {selectedItems.length > 0 ? (
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[11px] font-medium text-slate-400">已選品項清單：</div>
+                  {selectedItems.map((item) => (
+                    <div
+                      key={item.code}
+                      className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-2 flex items-center justify-between"
+                    >
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>{item.code}</span>
+                          <span className="text-[10px] text-slate-400 font-normal truncate">
+                            {item.name || ''}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-indigo-300 font-mono">
+                          NT$ {item.price} × {item.qty} = NT$ {(item.price * item.qty).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* 加減按鈕 */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQty(item.code, -1)}
+                          className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700 active:bg-slate-700"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-6 text-center font-mono font-bold text-xs text-white">
+                          {item.qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQty(item.code, 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700 active:bg-slate-700"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-3 text-xs text-slate-500 bg-slate-900/40 rounded-xl border border-dashed border-slate-700">
+                  尚未選擇任何陀螺，請點擊上方型號 👆
+                </div>
+              )}
+            </div>
+
+            {/* 3. 盒況與現場採買狀態 (快速打勾/切換) */}
+            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span> 3. 盒況需求 & 採買狀況
+              </span>
+
+              {/* 盒況需求 */}
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1">盒況 / 拆盒偏好 (省行李空間)</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['可拆盒', '保留外盒', '壓盒扁平'].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setBoxOption(opt)}
+                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all ${
+                        boxOption === opt
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold shadow-sm'
+                          : 'bg-slate-900/60 border-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 現場採買狀態 */}
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1">現場搶購狀況</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: '已採買', color: 'emerald' },
+                    { label: '部分缺貨', color: 'amber' },
+                    { label: '缺貨待退', color: 'rose' }
+                  ].map((st) => (
+                    <button
+                      key={st.label}
+                      type="button"
+                      onClick={() => setPurchaseStatus(st.label)}
+                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all ${
+                        purchaseStatus === st.label
+                          ? st.label === '已採買'
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                            : st.label === '部分缺貨'
+                            ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
+                            : 'bg-rose-500/20 border-rose-500 text-rose-300 font-bold'
+                          : 'bg-slate-900/60 border-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 4. 自動計價與金流資訊 (訂金 $300/顆 + 尾款自動算) */}
+            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/70 shadow-lg space-y-3">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> 4. 金流對帳與訂金計算
+              </span>
+
+              {/* 價格計算展示區 */}
+              <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>總顆數：</span>
+                  <span className="font-mono font-bold text-white">{totalCount} 顆</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>代購總金額：</span>
+                  <span className="font-mono font-bold text-emerald-400">NT$ {totalAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300 border-t border-slate-800 pt-1.5">
+                  <span className="flex items-center gap-1">
+                    應收訂金 ($300/顆)：
+                  </span>
+                  <span className="font-mono font-bold text-amber-400">NT$ {depositExpected.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-slate-100 border-t border-slate-800 pt-1.5">
+                  <span>賣貨便貨到付款尾款：</span>
+                  <span className="font-mono text-sm text-rose-400">NT$ {remainingCod.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* 訂金匯款狀態與末五碼 */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">訂金入帳狀態</label>
+                  <select
+                    value={depositStatus}
+                    onChange={(e) => setDepositStatus(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:border-emerald-500"
+                  >
+                    <option value="已入帳">✅ 已入帳</option>
+                    <option value="已匯待對">⏳ 已匯款待對帳</option>
+                    <option value="未匯款">❌ 未匯款</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">買家匯款末五碼</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="例: 12345"
+                    value={bankLast5}
+                    onChange={(e) => setBankLast5(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder-slate-600 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* 缺貨退款帳號 (若缺貨時填寫) */}
+              {purchaseStatus === '缺貨待退' && (
+                <div className="animate-fadeIn">
+                  <label className="block text-[11px] text-rose-300 mb-1">缺貨退款銀行代碼與帳號</label>
+                  <input
+                    type="text"
+                    placeholder="例: 822 國泰 0123456789"
+                    value={refundAccount}
+                    onChange={(e) => setRefundAccount(e.target.value)}
+                    className="w-full bg-slate-900 border border-rose-500/50 rounded-xl px-3 py-2 text-xs text-rose-100 placeholder-slate-600"
+                  />
+                </div>
+              )}
+
+              {/* 備註 */}
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1">備註說明</label>
+                <input
+                  type="text"
+                  placeholder="例如：優先選好盒、跟朋友併單出貨..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600"
+                />
+              </div>
+            </div>
+
+            {/* 送出 / 儲存按鈕 (iPhone 底部大按鈕) */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={handleSaveOrder}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white font-bold text-sm shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{editingOrderId ? '更新訂單內容' : '立即送出並記錄訂單'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 2: 訂單清單與 LINE 一鍵回覆                            */}
+        {/* ========================================================= */}
+        {currentTab === 'orders' && (
+          <div className="space-y-3 animate-fadeIn">
+            {/* 搜尋與篩選列 */}
+            <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700 space-y-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="搜尋買家暱稱 / 單號 / 型號..."
+                  value={orderSearchText}
+                  onChange={(e) => setOrderSearchText(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* 篩選標籤 */}
+              <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar text-[11px]">
+                {[
+                  { key: 'ALL', label: '全部' },
+                  { key: 'PAID', label: '訂金已入' },
+                  { key: 'UNPAID', label: '待收訂金' },
+                  { key: 'BOUGHT', label: '已採買' },
+                  { key: 'OUT_OF_STOCK', label: '缺貨待退' }
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setOrderStatusFilter(f.key)}
+                    className={`px-2.5 py-1 rounded-lg whitespace-nowrap font-medium transition-all ${
+                      orderStatusFilter === f.key
+                        ? 'bg-indigo-600 text-white shadow'
+                        : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 訂單卡片列表 */}
+            {filteredOrders.length === 0 ? (
+              <div className="text-center py-12 bg-slate-800/40 rounded-2xl border border-dashed border-slate-700 text-slate-400 text-xs">
+                尚無符合條件的訂單
+              </div>
+            ) : (
+              filteredOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-slate-800/90 rounded-2xl p-3.5 border border-slate-700 shadow-md space-y-2.5"
+                >
+                  {/* 頂部：單號、買家、狀態徽章 */}
+                  <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                        {order.id}
+                      </span>
+                      <span className="text-sm font-bold text-white truncate max-w-[130px]">
+                        {order.lineName}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {/* 採買狀況徽章 */}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        order.purchaseStatus === '已採買'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : order.purchaseStatus === '缺貨待退'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}>
+                        {order.purchaseStatus}
+                      </span>
+
+                      {/* 訂金狀態徽章 */}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        order.depositStatus === '已入帳'
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                      }`}>
+                        {order.depositStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 訂購明細標籤 */}
+                  <div className="flex flex-wrap gap-1">
+                    {order.items.map((it, idx) => (
+                      <span key={idx} className="bg-slate-900 text-indigo-300 text-[11px] px-2 py-0.5 rounded-md font-mono border border-slate-700">
+                        {it.code} × {it.qty}
+                      </span>
+                    ))}
+                    <span className="text-[11px] text-slate-400 py-0.5">
+                      (共 {order.totalCount} 顆 · {order.boxOption})
+                    </span>
+                  </div>
+
+                  {/* 金額統計列 */}
+                  <div className="bg-slate-900/90 rounded-xl p-2.5 flex items-center justify-between text-xs font-mono">
+                    <div>
+                      <div className="text-[10px] text-slate-400">代購總價</div>
+                      <div className="font-bold text-emerald-400">NT$ {order.totalAmount.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-400">已付訂金 {order.bankLast5 ? `(${order.bankLast5})` : ''}</div>
+                      <div className="font-bold text-amber-400">NT$ {order.depositPaid.toLocaleString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-400">賣貨便尾款</div>
+                      <div className="font-bold text-rose-400">NT$ {order.remainingCod.toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  {order.note && (
+                    <div className="text-[11px] text-slate-400 bg-slate-900/40 px-2 py-1 rounded">
+                      💬 備註：{order.note}
+                    </div>
+                  )}
+
+                  {/* 快捷操作按鈕列 (LINE 回覆 / 編輯 / 刪除) */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLineReply(order)}
+                      className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-emerald-600/30 active:scale-95 transition-all"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>複製 LINE 確認單</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditOrder(order)}
+                      className="p-2 rounded-xl bg-slate-700 text-slate-200 text-xs hover:bg-slate-600 active:scale-95"
+                      title="編輯此單"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOrder(order.id)}
+                      className="p-2 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs hover:bg-rose-500/30 active:scale-95"
+                      title="刪除"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 3: 陀螺對應定價 Table 管理                           */}
+        {/* ========================================================= */}
+        {currentTab === 'pricing' && (
+          <div className="space-y-3 animate-fadeIn">
+            {/* 頂部功能列 */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-white">陀螺定價資料庫</h2>
+                <p className="text-[11px] text-slate-400">在此維護型號與售價，自動帶入下單計算</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingPriceItem(!isAddingPriceItem)}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95"
+              >
+                {isAddingPriceItem ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>{isAddingPriceItem ? '收起' : '新增型號'}</span>
+              </button>
+            </div>
+
+            {/* 新增型號摺疊表單 */}
+            {isAddingPriceItem && (
+              <div className="bg-slate-800 p-3.5 rounded-2xl border border-indigo-500/40 shadow-xl space-y-2.5 animate-fadeIn">
+                <div className="text-xs font-bold text-indigo-300">＋ 新增陀螺品項與定價</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-slate-400">型號代碼 (如 BX41)</label>
+                    <input
+                      type="text"
+                      placeholder="BX41"
+                      value={newPriceCode}
+                      onChange={(e) => setNewPriceCode(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400">台灣代購定價 (TWD)</label>
+                    <input
+                      type="number"
+                      placeholder="680"
+                      value={newPriceTWD}
+                      onChange={(e) => setNewPriceTWD(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-slate-400">品名全稱 (選填)</label>
+                  <input
+                    type="text"
+                    placeholder="如：BX-41 極限破壞神"
+                    value={newPriceName}
+                    onChange={(e) => setNewPriceName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-slate-400">分類</label>
+                    <select
+                      value={newPriceCat}
+                      onChange={(e) => setNewPriceCat(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
+                    >
+                      <option value="BX系列">BX 系列</option>
+                      <option value="UX系列">UX 系列</option>
+                      <option value="CX系列">CX 系列</option>
+                      <option value="配件">發射器 / 配件</option>
+                      <option value="限定款">香港限定</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400">備註</label>
+                    <input
+                      type="text"
+                      placeholder="如：附發射器"
+                      value={newPriceNote}
+                      onChange={(e) => setNewPriceNote(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddNewPriceItem}
+                  className="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-500 active:scale-95"
+                >
+                  確認加入定價表
+                </button>
+              </div>
+            )}
+
+            {/* 定價清單卡片 */}
+            <div className="space-y-2">
+              {priceTable.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-slate-800/90 rounded-2xl p-3 border border-slate-700 flex items-center justify-between"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                        {item.code}
+                      </span>
+                      <span className="text-xs font-semibold text-white truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
+                      <span className="text-emerald-400 font-mono font-bold">NT$ {item.priceTWD}</span>
+                      <span>· {item.category}</span>
+                      {item.note && <span className="text-slate-500">({item.note})</span>}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePriceItem(item.id, item.code)}
+                    className="p-2 text-slate-500 hover:text-rose-400 active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 4: Google 試算表匯出與同步設定                         */}
+        {/* ========================================================= */}
+        {currentTab === 'sync' && (
+          <div className="space-y-3.5 animate-fadeIn">
+            <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-lg space-y-3">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                <span>Google 試算表一鍵匯出</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                你的目標試算表：
+                <a
+                  href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-400 underline font-medium inline-flex items-center gap-1 ml-1"
+                >
+                  香港陀螺 V2 <ExternalLink className="w-3 h-3" />
+                </a>
+              </p>
+
+              {/* 一鍵複製按鈕 */}
+              <button
+                type="button"
+                onClick={handleCopyForGoogleSheet}
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95"
+              >
+                <Copy className="w-4 h-4" />
+                <span>一鍵複製全表 (直接貼入 Google Sheet)</span>
+              </button>
+              <div className="text-[11px] text-slate-400 text-center">
+                複製後在 Google Sheet 的 <code>A1</code> 儲存格按貼上即可完美填滿所有欄位。
+              </div>
+            </div>
+
+            {/* 統計面板摘要 */}
+            <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700 space-y-2">
+              <span className="text-xs font-bold text-slate-300">📊 當前代購行李與金流統計</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-[10px] text-slate-400">總訂單筆數</div>
+                  <div className="text-sm font-bold font-mono text-white">{orders.length} 筆</div>
+                </div>
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-[10px] text-slate-400">陀螺總顆數 (行李體積)</div>
+                  <div className="text-sm font-bold font-mono text-indigo-400">
+                    {orders.reduce((s, o) => s + o.totalCount, 0)} 顆
+                  </div>
+                </div>
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-[10px] text-slate-400">已收取訂金總額</div>
+                  <div className="text-sm font-bold font-mono text-amber-400">
+                    NT$ {orders.reduce((s, o) => s + o.depositPaid, 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <div className="text-[10px] text-slate-400">預計賣貨便尾款總額</div>
+                  <div className="text-sm font-bold font-mono text-rose-400">
+                    NT$ {orders.reduce((s, o) => s + o.remainingCod, 0).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ========================================================= */}
+      {/* 底部 iPhone 15 Pro 導覽列 (Fixed Bottom Navigation)       */}
+      {/* ========================================================= */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 px-3 pt-2 pb-5">
+        <div className="max-w-md mx-auto grid grid-cols-4 gap-1">
+          {/* 1. 快速下單 */}
+          <button
+            type="button"
+            onClick={() => setCurrentTab('form')}
+            className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
+              currentTab === 'form'
+                ? 'text-rose-400 font-bold bg-rose-500/10'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Plus className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px]">快速下單</span>
+          </button>
+
+          {/* 2. 訂單清單 */}
+          <button
+            type="button"
+            onClick={() => setCurrentTab('orders')}
+            className={`flex flex-col items-center justify-center py-1.5 rounded-xl relative transition-all ${
+              currentTab === 'orders'
+                ? 'text-indigo-400 font-bold bg-indigo-500/10'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px]">訂單清單</span>
+            {orders.length > 0 && (
+              <span className="absolute top-1 right-3 bg-indigo-500 text-white font-mono text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {orders.length}
+              </span>
+            )}
+          </button>
+
+          {/* 3. 定價資料庫 */}
+          <button
+            type="button"
+            onClick={() => setCurrentTab('pricing')}
+            className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
+              currentTab === 'pricing'
+                ? 'text-amber-400 font-bold bg-amber-500/10'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Table className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px]">定價管理</span>
+          </button>
+
+          {/* 4. 試算表同步 */}
+          <button
+            type="button"
+            onClick={() => setCurrentTab('sync')}
+            className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
+              currentTab === 'sync'
+                ? 'text-emerald-400 font-bold bg-emerald-500/10'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FileSpreadsheet className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px]">匯出同步</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+}
