@@ -31,8 +31,7 @@ import {
   Unlock
 } from 'lucide-react';
 
-// 加密存放的敏感網址 (金鑰為密碼 0429)
-// 原始碼中不會出現明文 Google Sheet 或 Webhook 網址，推至 GitHub 也無法從源碼看出！
+// 加密存放之管理網址 (位元層級密鑰保護，原始碼中不含任何明文 URL)
 const ENCRYPTED_SHEET_URL = 'WEBGSUMOHRZUW1FKHlNdVldYVxdTW18WQ0RAXFFQQVFVUUZKH1AdCFREBGZJTh94Zw15TXxsbVRUBnFKXWAGXAlQdwFpBUhgZmsBWEdBSnQIR0EWVVBbTQ9BQUkNR1pYQl1cXg==';
 const ENCRYPTED_WEBHOOK_URL = 'WEBGSUMOHRZDV0BQQEAcXl9bVVVVGlFWXRtfWFNGXUofRx14e1JLWlJDXkxKA1NtRHxgC2hAeHNgZlBUQExqSmJEX3p6YXxPYHZIfnhkcXoIZ2ZjdwMGCH1wdVZ6c0JBXXpVSVtiRHxqZXVOVxtXQVVX';
 
@@ -124,7 +123,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_ORDERS;
   });
 
-  // 密碼解鎖與加密網址管理 (預設密碼: 0429)
+  // 密碼解鎖與加密網址管理
   const [inputPassword, setInputPassword] = useState('');
   const [unlockedSheetUrl, setUnlockedSheetUrl] = useState(() => {
     const savedKey = localStorage.getItem('hk_secret_pass');
