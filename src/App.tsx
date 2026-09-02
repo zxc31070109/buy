@@ -105,11 +105,16 @@ export default function App() {
   });
 
   // Google Apps Script Webhook 網址與自動同步設定
+  const OLD_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbywTUGlA_8mAlis8bsGdAtU-2MCo8YirhQ_uHxtAPz9uj3MYMeiFSmCobUzAOh30RVznw/exec';
   const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwluz7aTtHR2XtJJPRbmpxXsRpmCJUNvPBzGHPCC8STZG741MDGoJGpxmNgpkVvEZQGwg/exec';
 
   const [webhookUrl, setWebhookUrl] = useState(() => {
-    return localStorage.getItem('hk_beyblade_webhook_url') || DEFAULT_WEBHOOK_URL;
+    const saved = localStorage.getItem('hk_beyblade_webhook_url');
+    if (!saved || saved === OLD_WEBHOOK_URL) return DEFAULT_WEBHOOK_URL;
+    return saved;
   });
+
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
   const [autoSync, setAutoSync] = useState(() => {
     return localStorage.getItem('hk_beyblade_auto_sync') !== 'false';
@@ -157,6 +162,41 @@ export default function App() {
     } catch (err) {
       console.error('Webhook sync failed:', err);
       return false;
+    }
+  };
+
+  const handleTestWebhook = async () => {
+    if (!webhookUrl.trim()) {
+      showToast('⚠️ 請先輸入 Webhook 網址！');
+      return;
+    }
+    setIsTestingWebhook(true);
+    const testOrder = {
+      id: 'HK-TEST-' + Math.floor(100 + Math.random() * 900),
+      lineName: '系統測試員',
+      items: [{ code: 'BX-00', qty: 1 }],
+      totalCount: 1,
+      boxOption: '外盒完整',
+      purchaseStatus: '未採買',
+      depositPaid: 0,
+      bankLast5: '88888',
+      depositStatus: '已入帳',
+      totalAmount: 100,
+      remainingCod: 100,
+      myshipCode: 'TEST',
+      myshipStatus: '未下單',
+      shippingStatus: '未出貨',
+      refundAccount: '',
+      note: '連線測試筆記',
+      createdAt: new Date().toLocaleString('zh-TW', { hour12: false })
+    };
+
+    const success = await sendOrderToWebhook(testOrder);
+    setIsTestingWebhook(false);
+    if (success) {
+      showToast('✅ 測試請求已發送！請至 Google 試算表確認是否有新增測試資料。');
+    } else {
+      showToast('❌ 發送失敗，請確認 Webhook 網址是否正確。');
     }
   };
 
@@ -476,7 +516,11 @@ export default function App() {
     showToast('📊 已複製全部訂單！可直接到 Google Sheet 貼上 (Ctrl+V / Cmd+V)');
   };
 
-  const gasScriptCode = `function doPost(e) {
+  const gasScriptCode = `function doGet(e) {
+  return ContentService.createTextOutput("Google Apps Script Webhook 運作正常！");
+}
+
+function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = JSON.parse(e.postData.contents);
@@ -1226,6 +1270,18 @@ export default function App() {
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
                   />
+                  {webhookUrl !== DEFAULT_WEBHOOK_URL && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWebhookUrl(DEFAULT_WEBHOOK_URL);
+                        showToast('已重置為最新預設 Webhook 網址');
+                      }}
+                      className="px-2.5 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs hover:bg-amber-500/30 active:scale-95 cursor-pointer font-medium"
+                    >
+                      重置網址
+                    </button>
+                  )}
                   {webhookUrl && (
                     <button
                       type="button"
@@ -1240,6 +1296,17 @@ export default function App() {
                   )}
                 </div>
               </div>
+
+              {/* 測試同步按鈕 */}
+              <button
+                type="button"
+                onClick={handleTestWebhook}
+                disabled={isTestingWebhook}
+                className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-indigo-400/30 shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+              >
+                <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                <span>{isTestingWebhook ? '測試連線中...' : '🧪 點我測試寫入 1 筆資料至 Google 試算表'}</span>
+              </button>
 
               {/* 自動寫入開關 */}
               <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
