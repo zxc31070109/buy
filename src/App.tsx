@@ -697,7 +697,7 @@ function doPost(e) {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-400 flex items-center justify-center shadow-lg shadow-rose-500/20">
-              <Sparkles className="w-4 h-4 text-white animate-pulse" />
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
@@ -722,7 +722,7 @@ function doPost(e) {
 
       {/* 浮動 Toast 提示 */}
       {toastMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-800/95 border border-slate-700 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 animate-bounce">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-800/95 border border-slate-700 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2">
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1038,7 +1038,7 @@ function doPost(e) {
 
               {webhookUrl.trim() && autoSync && (
                 <div className="mt-2 text-center text-xs text-emerald-400 flex items-center justify-center gap-1 font-medium">
-                  <Zap className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
                   <span>已啟動 Google 試算表自動即時寫入</span>
                 </div>
               )}
@@ -1425,7 +1425,7 @@ function doPost(e) {
             <div className="bg-slate-800/95 rounded-2xl p-4 border border-indigo-500/50 shadow-xl space-y-3.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-white font-bold text-base">
-                  <Zap className="w-5 h-5 text-amber-400 fill-amber-400 animate-pulse" />
+                  <Zap className="w-5 h-5 text-amber-400 fill-amber-400" />
                   <span>Google 試算表自動同步 (Webhook)</span>
                 </div>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
