@@ -107,10 +107,13 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_ORDERS;
   });
 
-  // Google Apps Script Webhook 網址設定
+  // Google Apps Script Webhook 網址設定 (預設即帶入最新 Webhook 網址)
   const [webhookUrl, setWebhookUrl] = useState(() => {
     const saved = localStorage.getItem('hk_beyblade_webhook_url');
-    return saved || DEFAULT_WEBHOOK_URL;
+    if (!saved || saved.trim() === '' || saved.includes('AKfycbyw')) {
+      return DEFAULT_WEBHOOK_URL;
+    }
+    return saved.trim();
   });
 
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
@@ -147,16 +150,20 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 2500);
   };
 
+  // 重置 Webhook 網址為預設連線
+  const handleResetWebhookUrl = () => {
+    setWebhookUrl(DEFAULT_WEBHOOK_URL);
+    localStorage.setItem('hk_beyblade_webhook_url', DEFAULT_WEBHOOK_URL);
+    showToast('🔄 已重置 Webhook 網址為預設連線！');
+  };
+
   // 從 Google Apps Script Webhook 即時讀取線上 Google 試算表訂單
   const fetchOrdersFromGoogleSheet = async (showToastNotice = true) => {
-    if (!webhookUrl.trim()) {
-      if (showToastNotice) showToast('⚠️ 請先設定 Webhook 網址！');
-      return false;
-    }
+    const targetUrl = webhookUrl.trim() || DEFAULT_WEBHOOK_URL;
 
     setIsLoadingOrders(true);
     try {
-      const response = await fetch(webhookUrl.trim());
+      const response = await fetch(targetUrl);
       const text = await response.text();
       let data: any = null;
       try {
@@ -167,10 +174,41 @@ export default function App() {
 
       if (data && data.status === 'success' && Array.isArray(data.orders)) {
         if (data.orders.length > 0) {
-          setOrders(data.orders);
+          const sanitizedOrders = data.orders.map((o: any) => {
+            const sanitizedItems = (o.items || []).map((it: any) => {
+              let code = String(it.code || '').trim();
+              let qty = Number(it.qty) || 1;
+              if (code.includes('*')) {
+                const parts = code.split('*');
+                code = parts[0].trim();
+                qty = Number(parts[1]) || qty;
+              }
+              const matched = priceTable.find(p => p.code.toUpperCase() === code.toUpperCase());
+              const price = matched ? matched.priceTWD : (Number(it.price) || 0);
+              return { code, qty, price };
+            });
+
+            const totalCount = Number(o.totalCount) || sanitizedItems.reduce((acc: number, cur: any) => acc + cur.qty, 0);
+            const totalAmount = Number(o.totalAmount) || sanitizedItems.reduce((acc: number, cur: any) => acc + (cur.price * cur.qty), 0);
+            const depositPaid = Number(o.depositPaid) || 0;
+            const remainingCod = Number(o.remainingCod) || Math.max(0, totalAmount - depositPaid);
+
+            return {
+              ...o,
+              items: sanitizedItems,
+              totalCount,
+              totalAmount,
+              depositPaid,
+              remainingCod,
+              bankLast5: String(o.bankLast5 || '').replace(/^'/, ''),
+              createdAt: o.createdAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+          });
+
+          setOrders(sanitizedOrders);
           setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
           if (showToastNotice) {
-            showToast(`✅ 已成功從 Google 試算表載入 ${data.orders.length} 筆最新訂單！`);
+            showToast(`✅ 已成功從 Google 試算表同步 ${sanitizedOrders.length} 筆最新訂單！`);
           }
         } else {
           if (showToastNotice) showToast('ℹ️ Google 試算表目前尚無訂單紀錄');
@@ -179,12 +217,12 @@ export default function App() {
         return true;
       } else {
         if (showToastNotice) {
-          showToast('⚠️ 試算表未回傳訂單資料，請確認 GAS 是否已部署最新腳本');
+          showToast('⚠️ 試算表未回傳資料，請確認 GAS 是否已部署並存檔');
         }
       }
     } catch (err) {
       console.error('Failed to fetch orders from Google Sheet:', err);
-      if (showToastNotice) showToast('❌ 連線試算表失敗，顯示本地緩存資料');
+      if (showToastNotice) showToast('❌ 連線試算表失敗，已顯示本地緩存資料');
     }
     setIsLoadingOrders(false);
     return false;
@@ -194,17 +232,17 @@ export default function App() {
 
   // 切換到「訂單清單」頁面時，初次自動同步一次，後續由使用者手動點擊「重新刷新」
   useEffect(() => {
-    if (currentTab === 'orders' && webhookUrl.trim() && !hasInitialFetched) {
+    if (currentTab === 'orders' && !hasInitialFetched) {
       fetchOrdersFromGoogleSheet(false);
       setHasInitialFetched(true);
     }
-  }, [currentTab, webhookUrl, hasInitialFetched]);
+  }, [currentTab, hasInitialFetched]);
 
   // 自動發送 single order 到 Google Apps Script Webhook
   const sendOrderToWebhook = async (order: any) => {
-    if (!webhookUrl.trim()) return false;
+    const targetUrl = webhookUrl.trim() || DEFAULT_WEBHOOK_URL;
     try {
-      await fetch(webhookUrl.trim(), {
+      await fetch(targetUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
@@ -1440,6 +1478,14 @@ function doPost(e) {
                     className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap"
                   >
                     {isTestingWebhook ? '測試中...' : '測試連線'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetWebhookUrl}
+                    className="px-2.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium active:scale-95 cursor-pointer whitespace-nowrap"
+                    title="重置為預設 Webhook 網址"
+                  >
+                    重置網址
                   </button>
                 </div>
               </div>
