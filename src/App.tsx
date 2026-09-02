@@ -191,12 +191,15 @@ export default function App() {
     return false;
   };
 
-  // 切換到「訂單清單」頁面時自動從雲端 Google 試算表拉取最新數據
+  const [hasInitialFetched, setHasInitialFetched] = useState(false);
+
+  // 切換到「訂單清單」頁面時，初次自動同步一次，後續由使用者手動點擊「重新刷新」
   useEffect(() => {
-    if (currentTab === 'orders' && webhookUrl.trim()) {
+    if (currentTab === 'orders' && webhookUrl.trim() && !hasInitialFetched) {
       fetchOrdersFromGoogleSheet(false);
+      setHasInitialFetched(true);
     }
-  }, [currentTab, webhookUrl]);
+  }, [currentTab, webhookUrl, hasInitialFetched]);
 
   // 自動發送 single order 到 Google Apps Script Webhook
   const sendOrderToWebhook = async (order: any) => {
@@ -1048,10 +1051,10 @@ function doPost(e) {
         {/* ========================================================= */}
         {currentTab === 'orders' && (
           <div className="space-y-3.5 animate-fadeIn">
-            {/* ☁️ 雲端試算表即時連線控制列 */}
+            {/* ☁️ 雲端試算表連線控制列 */}
             <div className="bg-slate-800/90 rounded-2xl p-3 border border-emerald-500/40 shadow-lg flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping flex-shrink-0"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
                     <span>Google 試算表實時數據</span>
@@ -1060,7 +1063,7 @@ function doPost(e) {
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-400 truncate">
-                    {lastSyncTime ? `上次更新時間: ${lastSyncTime}` : '雲端同步中，直接呈現線上資料'}
+                    {lastSyncTime ? `上次更新: ${lastSyncTime}` : '點擊按鈕從 Google 試算表同步資料'}
                   </div>
                 </div>
               </div>
