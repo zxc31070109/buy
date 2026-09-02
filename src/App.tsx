@@ -105,8 +105,10 @@ export default function App() {
   });
 
   // Google Apps Script Webhook 網址與自動同步設定
+  const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwluz7aTtHR2XtJJPRbmpxXsRpmCJUNvPBzGHPCC8STZG741MDGoJGpxmNgpkVvEZQGwg/exec';
+
   const [webhookUrl, setWebhookUrl] = useState(() => {
-    return localStorage.getItem('hk_beyblade_webhook_url') || '';
+    return localStorage.getItem('hk_beyblade_webhook_url') || DEFAULT_WEBHOOK_URL;
   });
 
   const [autoSync, setAutoSync] = useState(() => {
