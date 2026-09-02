@@ -1531,7 +1531,7 @@ function doPost(e) {
                   <div className="flex gap-2">
                     <input
                       type="password"
-                      placeholder="請輸入密碼 (預設: 0429)"
+                      placeholder="請輸入管理解鎖密碼..."
                       value={inputPassword}
                       onChange={(e) => setInputPassword(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleUnlockSecret(); }}
