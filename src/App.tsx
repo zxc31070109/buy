@@ -1493,6 +1493,112 @@ function doPost(e) {
               </div>
             </div>
 
+            {/* ⚡ Webhook 自動寫入與實時同步設定 */}
+            <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-xl space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold text-base">
+                  <Zap className="w-5 h-5 text-amber-400" />
+                  <span>Google Apps Script Webhook 設定</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGasTutorial(!showGasTutorial)}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                >
+                  {showGasTutorial ? '隱藏教學' : '📖 腳本佈署教學'}
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">
+                  Webhook 網址 (Google Apps Script 網頁應用程式 URL)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestWebhook}
+                    disabled={isTestingWebhook}
+                    className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {isTestingWebhook ? '測試中...' : '測試連線'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-slate-300 font-medium">下單時自動寫入 Google 試算表</span>
+                <button
+                  type="button"
+                  onClick={() => setAutoSync(!autoSync)}
+                  className={`w-11 h-6 rounded-full transition-colors p-1 cursor-pointer flex items-center ${
+                    autoSync ? 'bg-emerald-500 justify-end' : 'bg-slate-700 justify-start'
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-md"></div>
+                </button>
+              </div>
+            </div>
+
+            {/* 📋 手動複製表格內容 (一鍵複製成 TSV) */}
+            <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                  <Copy className="w-4 h-4 text-indigo-400" />
+                  <span>手動複製全表資料 (貼至 Excel/Sheet)</span>
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                若無設定 Webhook，可點擊下方按鈕複製 TSV 格式資料，直接開啟 Google 試算表在第一個儲存格按 Ctrl+V / Cmd+V 即可完成貼上。
+              </p>
+              <button
+                type="button"
+                onClick={handleCopyForGoogleSheet}
+                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>一鍵複製全表 TSV 貼上格式</span>
+              </button>
+            </div>
+
+            {/* 📖 Google Apps Script (GAS) 部署教學與腳本複製卡片 */}
+            {showGasTutorial && (
+              <div className="bg-slate-800/95 rounded-2xl p-4 border border-indigo-500/40 shadow-xl space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-indigo-300">🛠️ Google Apps Script 更新教學與腳本程式碼</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fallbackCopy(gasScriptCode);
+                      showToast('📋 已複製最新的 Google Apps Script 完整程式碼！');
+                    }}
+                    className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 active:scale-95 cursor-pointer shadow-md shadow-indigo-600/30"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>複製 GAS 腳本程式碼</span>
+                  </button>
+                </div>
+
+                <ol className="text-xs text-slate-300 space-y-1.5 list-decimal pl-4 leading-relaxed">
+                  <li>開啟您的 Google 試算表，點選上方選單「擴充功能」 ➔ 「Apps Script」。</li>
+                  <li>將預設程式碼全部刪除，貼上點擊上方按鈕複製的最新完整程式碼。</li>
+                  <li>點選右上角「部署」 ➔ 「管理部署」 ➔ 點擊鉛筆圖示 (編輯)。</li>
+                  <li>版本選擇「建立新版本」 ➔ 點擊「部署」。</li>
+                  <li>複製顯示的「網頁應用程式 URL」貼回上方輸入框即可完成！</li>
+                </ol>
+
+                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 max-h-48 overflow-y-auto font-mono text-[11px] text-emerald-400 whitespace-pre">
+                  {gasScriptCode}
+                </div>
+              </div>
+            )}
+
             {/* 📊 線上 Google 試算表 (Excel) 網址卡片 (分頁最下方，含密碼解鎖保護) */}
             <div className="bg-gradient-to-br from-emerald-900/40 via-slate-800 to-slate-800 rounded-2xl p-4 border border-emerald-500/50 shadow-xl space-y-3.5">
               <div className="flex items-center justify-between">
