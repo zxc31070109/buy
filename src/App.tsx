@@ -24,7 +24,9 @@ import {
   Send,
   Sparkles,
   ChevronDown,
-  X
+  X,
+  Link,
+  Zap
 } from 'lucide-react';
 
 // 預設陀螺定價庫存表 (第二頁管理)
@@ -48,17 +50,17 @@ const INITIAL_ORDERS = [
       { code: 'UX20', qty: 1, price: 720 }
     ],
     totalCount: 3,
-    boxOption: '可拆盒', // 可拆盒 | 保留外盒 | 壓盒帶回
-    purchaseStatus: '已採買', // 已採買 | 部分缺貨 | 缺貨待退
+    boxOption: '可拆盒',
+    purchaseStatus: '已採買',
     depositPerUnit: 300,
     depositPaid: 900,
-    depositStatus: '已入帳', // 未匯款 | 已匯待對 | 已入帳
+    depositStatus: '已入帳',
     bankLast5: '12345',
     totalAmount: 2080,
     remainingCod: 1180,
-    myshipStatus: '待開賣場', // 待開賣場 | 已開賣場 | 已下單 | 免開賣場
+    myshipStatus: '待開賣場',
     myshipCode: '',
-    shippingStatus: '待出貨', // 待出貨 | 已寄出 | 已取貨 | 已退款
+    shippingStatus: '待出貨',
     refundAccount: '',
     note: '可拆盒省空間，優先挑八角完整',
     createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -91,9 +93,43 @@ export default function App() {
   // Tab 狀態: 'form' (下單), 'orders' (清單), 'pricing' (定價庫), 'sync' (同步設定)
   const [currentTab, setCurrentTab] = useState('form');
 
-  // 資料狀態
-  const [priceTable, setPriceTable] = useState(INITIAL_PRICE_TABLE);
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  // 資料持久化 (LocalStorage)
+  const [priceTable, setPriceTable] = useState(() => {
+    const saved = localStorage.getItem('hk_beyblade_price_table');
+    return saved ? JSON.parse(saved) : INITIAL_PRICE_TABLE;
+  });
+
+  const [orders, setOrders] = useState(() => {
+    const saved = localStorage.getItem('hk_beyblade_orders');
+    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+  });
+
+  // Google Apps Script Webhook 網址與自動同步設定
+  const [webhookUrl, setWebhookUrl] = useState(() => {
+    return localStorage.getItem('hk_beyblade_webhook_url') || '';
+  });
+
+  const [autoSync, setAutoSync] = useState(() => {
+    return localStorage.getItem('hk_beyblade_auto_sync') !== 'false';
+  });
+
+  const [showGasTutorial, setShowGasTutorial] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('hk_beyblade_price_table', JSON.stringify(priceTable));
+  }, [priceTable]);
+
+  useEffect(() => {
+    localStorage.setItem('hk_beyblade_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem('hk_beyblade_webhook_url', webhookUrl);
+  }, [webhookUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('hk_beyblade_auto_sync', String(autoSync));
+  }, [autoSync]);
 
   // 提示訊息 Notification
   const [toastMessage, setToastMessage] = useState('');
@@ -103,11 +139,30 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 2500);
   };
 
+  // 自動發送 single order 到 Google Apps Script Webhook
+  const sendOrderToWebhook = async (order: any) => {
+    if (!webhookUrl.trim()) return false;
+    try {
+      await fetch(webhookUrl.trim(), {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(order)
+      });
+      return true;
+    } catch (err) {
+      console.error('Webhook sync failed:', err);
+      return false;
+    }
+  };
+
   // -------------------------------------------------------------
   // 第一頁：新增訂單表單狀態 (Draft)
   // -------------------------------------------------------------
   const nextOrderNumber = useMemo(() => {
-    const maxNum = orders.reduce((max, order) => {
+    const maxNum = orders.reduce((max: number, order: any) => {
       const match = order.id.match(/HK-(\d+)/);
       if (match) {
         const num = parseInt(match[1], 10);
@@ -120,7 +175,7 @@ export default function App() {
 
   const [formOrderId, setFormOrderId] = useState(nextOrderNumber);
   const [lineName, setLineName] = useState('');
-  const [selectedItems, setSelectedItems] = useState<any[]>([]); // [{ code, qty, price, customName }]
+  const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [customCodeInput, setCustomCodeInput] = useState('');
   const [customPriceInput, setCustomPriceInput] = useState('');
   const [boxOption, setBoxOption] = useState('可拆盒');
@@ -211,8 +266,8 @@ export default function App() {
     setNote('');
   };
 
-  // 儲存/更新訂單
-  const handleSaveOrder = () => {
+  // 儲存/更新訂單 (含自動寫入 Google Sheet)
+  const handleSaveOrder = async () => {
     if (!lineName.trim()) {
       showToast('⚠️ 請輸入 LINE 名稱/暱稱');
       return;
@@ -244,11 +299,18 @@ export default function App() {
     };
 
     if (editingOrderId) {
-      setOrders(prev => prev.map(o => o.id === editingOrderId ? newOrder : o));
+      setOrders((prev: any[]) => prev.map(o => o.id === editingOrderId ? newOrder : o));
       showToast(`✅ 訂單 ${editingOrderId} 更新成功！`);
     } else {
-      setOrders(prev => [newOrder, ...prev]);
-      showToast(`🎉 訂單 ${newOrder.id} 新增成功！`);
+      setOrders((prev: any[]) => [newOrder, ...prev]);
+
+      // 若啟用了 Webhook 自動同步，直接 post 至 Google Apps Script
+      if (webhookUrl.trim() && autoSync) {
+        sendOrderToWebhook(newOrder);
+        showToast(`🎉 訂單 ${newOrder.id} 新增成功，已即時寫入 Google Sheet！`);
+      } else {
+        showToast(`🎉 訂單 ${newOrder.id} 新增成功！`);
+      }
     }
 
     handleResetForm();
@@ -274,9 +336,20 @@ export default function App() {
   // 刪除訂單
   const handleDeleteOrder = (id: string) => {
     if (confirm(`確定要刪除訂單 ${id} 嗎？`)) {
-      setOrders(prev => prev.filter(o => o.id !== id));
+      setOrders((prev: any[]) => prev.filter(o => o.id !== id));
       showToast(`🗑️ 訂單 ${id} 已刪除`);
     }
+  };
+
+  // 單筆手動發送至 Webhook
+  const handleSingleOrderSync = (order: any) => {
+    if (!webhookUrl.trim()) {
+      showToast('⚠️ 請先在「匯出同步」頁面設定 Google Webhook 網址！');
+      setCurrentTab('sync');
+      return;
+    }
+    sendOrderToWebhook(order);
+    showToast(`⚡ 訂單 ${order.id} 已發送新增至 Google 試算表！`);
   };
 
   // 一鍵複製 LINE 喊單確認文字
@@ -315,7 +388,7 @@ export default function App() {
     textArea.select();
     try {
       document.execCommand('copy');
-      showToast('📋 已複製 LINE 回覆訊息！');
+      showToast('📋 已複製成功！');
     } catch (err) {
       showToast('❌ 複製失敗，請手動複製');
     }
@@ -345,7 +418,7 @@ export default function App() {
       category: newPriceCat,
       note: newPriceNote.trim()
     };
-    setPriceTable(prev => [newItem, ...prev]);
+    setPriceTable((prev: any[]) => [newItem, ...prev]);
     setNewPriceCode('');
     setNewPriceName('');
     setNewPriceTWD('');
@@ -356,7 +429,7 @@ export default function App() {
 
   const handleDeletePriceItem = (id: string, code: string) => {
     if (confirm(`確定要刪除型號 ${code} 嗎？`)) {
-      setPriceTable(prev => prev.filter(p => p.id !== id));
+      setPriceTable((prev: any[]) => prev.filter(p => p.id !== id));
       showToast(`已刪除型號 ${code}`);
     }
   };
@@ -364,10 +437,6 @@ export default function App() {
   // -------------------------------------------------------------
   // 第三頁 / 同步：Google Sheets 複製與 Webhook 工具
   // -------------------------------------------------------------
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  // 匯出 TSV / CSV 供直接全選貼入 Google Sheet
   const handleCopyForGoogleSheet = () => {
     const headers = [
       '序號', '訂單編號', 'LINE 名稱', '訂購品項與數量', '總顆數',
@@ -376,7 +445,7 @@ export default function App() {
       '賣貨便下單狀態', '出貨狀態', '缺貨退款帳號', '備註'
     ];
 
-    const rows = orders.map((o, idx) => {
+    const rows = orders.map((o: any, idx: number) => {
       const itemsStr = o.items.map((i: any) => `${i.code}*${i.qty}`).join(', ');
       return [
         idx + 1,
@@ -405,12 +474,54 @@ export default function App() {
     showToast('📊 已複製全部訂單！可直接到 Google Sheet 貼上 (Ctrl+V / Cmd+V)');
   };
 
+  const gasScriptCode = `function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    var itemsStr = (data.items || []).map(function(i) {
+      return i.code + '*' + i.qty;
+    }).join(', ');
+
+    var nextSeq = Math.max(1, sheet.getLastRow());
+
+    var newRow = [
+      nextSeq,                            // 1. 序號
+      data.id || '',                      // 2. 訂單編號
+      data.lineName || '',               // 3. LINE 名稱
+      itemsStr,                           // 4. 訂購品項與數量
+      data.totalCount || 0,               // 5. 總顆數
+      data.boxOption || '',               // 6. 盒況需求
+      data.purchaseStatus || '',          // 7. 現場採買狀況
+      data.depositPaid || 0,              // 8. 應收訂金
+      "'" + (data.bankLast5 || ''),      // 9. 匯款末五碼
+      data.depositStatus || '',           // 10. 訂金核對
+      data.totalAmount || 0,              // 11. 代購總金額
+      data.remainingCod || 0,             // 12. 賣貨便尾款
+      data.myshipCode || '',              // 13. 賣場代碼
+      data.myshipStatus || '',            // 14. 下單狀態
+      data.shippingStatus || '',          // 15. 出貨狀態
+      data.refundAccount || '',           // 16. 退款帳號
+      data.note || '',                    // 17. 備註
+      data.createdAt || ''               // 18. 時間
+    ];
+
+    sheet.appendRow(newRow);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
   // 搜尋與篩選狀態
   const [orderSearchText, setOrderSearchText] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
+    return orders.filter((o: any) => {
       const matchSearch =
         o.lineName.toLowerCase().includes(orderSearchText.toLowerCase()) ||
         o.id.toLowerCase().includes(orderSearchText.toLowerCase()) ||
@@ -450,7 +561,7 @@ export default function App() {
           <div className="text-right">
             <div className="text-[11px] text-slate-400">總訂購 / 總額</div>
             <div className="text-xs font-bold font-mono text-emerald-400">
-              {orders.reduce((s, o) => s + o.totalCount, 0)} 顆 · NT${orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString()}
+              {orders.reduce((s: number, o: any) => s + o.totalCount, 0)} 顆 · NT${orders.reduce((s: number, o: any) => s + o.totalAmount, 0).toLocaleString()}
             </div>
           </div>
         </div>
@@ -478,7 +589,7 @@ export default function App() {
                 </span>
                 <button
                   onClick={handleResetForm}
-                  className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[11px] hover:bg-amber-500/30"
+                  className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[11px] hover:bg-amber-500/30 cursor-pointer"
                 >
                   取消編輯
                 </button>
@@ -521,14 +632,14 @@ export default function App() {
 
               {/* 常用型號快速點擊晶片 (從定價表讀取) */}
               <div className="flex flex-wrap gap-1.5">
-                {priceTable.map((item) => {
+                {priceTable.map((item: any) => {
                   const currentInCart = selectedItems.find(i => i.code === item.code);
                   return (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => handleAddItemFromPriceTable(item)}
-                      className={`text-xs px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 transition-all active:scale-95 ${
+                      className={`text-xs px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
                         currentInCart
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 border border-indigo-400'
                           : 'bg-slate-900/80 text-slate-300 border border-slate-700 hover:border-slate-500'
@@ -565,7 +676,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleAddCustomItem}
-                  className="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-200 text-xs font-medium hover:bg-slate-600 active:scale-95"
+                  className="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-200 text-xs font-medium hover:bg-slate-600 active:scale-95 cursor-pointer"
                 >
                   + 自訂
                 </button>
@@ -597,7 +708,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(item.code, -1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700 active:bg-slate-700"
+                          className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700 active:bg-slate-700 cursor-pointer"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
@@ -607,7 +718,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(item.code, 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700 active:bg-slate-700"
+                          className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700 active:bg-slate-700 cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -637,7 +748,7 @@ export default function App() {
                       key={opt}
                       type="button"
                       onClick={() => setBoxOption(opt)}
-                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all ${
+                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all cursor-pointer ${
                         boxOption === opt
                           ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold shadow-sm'
                           : 'bg-slate-900/60 border-slate-700 text-slate-400'
@@ -662,7 +773,7 @@ export default function App() {
                       key={st.label}
                       type="button"
                       onClick={() => setPurchaseStatus(st.label)}
-                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all ${
+                      className={`py-2 px-1 text-xs rounded-xl font-medium border text-center transition-all cursor-pointer ${
                         purchaseStatus === st.label
                           ? st.label === '已採買'
                             ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
@@ -771,6 +882,13 @@ export default function App() {
                 <CheckCircle2 className="w-4 h-4" />
                 <span>{editingOrderId ? '更新訂單內容' : '立即送出並記錄訂單'}</span>
               </button>
+
+              {webhookUrl.trim() && autoSync && (
+                <div className="mt-1.5 text-center text-[10px] text-emerald-400 flex items-center justify-center gap-1 font-medium">
+                  <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
+                  <span>已啟動 Google 試算表自動即時寫入</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -824,7 +942,7 @@ export default function App() {
                 尚無符合條件的訂單
               </div>
             ) : (
-              filteredOrders.map((order) => (
+              filteredOrders.map((order: any) => (
                 <div
                   key={order.id}
                   className="bg-slate-800/90 rounded-2xl p-3.5 border border-slate-700 shadow-md space-y-2.5"
@@ -897,15 +1015,24 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* 快捷操作按鈕列 (LINE 回覆 / 編輯 / 刪除) */}
+                  {/* 快捷操作按鈕列 (LINE 回覆 / 寫入 Sheet / 編輯 / 刪除) */}
                   <div className="flex items-center gap-1.5 pt-1">
                     <button
                       type="button"
                       onClick={() => handleCopyLineReply(order)}
-                      className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                      className="flex-1 py-2 px-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-emerald-600/30 active:scale-95 transition-all cursor-pointer"
                     >
                       <Copy className="w-3.5 h-3.5" />
                       <span>複製 LINE 確認單</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSingleOrderSync(order)}
+                      className="p-2 rounded-xl bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs hover:bg-indigo-600/30 active:scale-95 cursor-pointer"
+                      title="獨立傳送至 Google 試算表"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
                     </button>
 
                     <button
@@ -1030,7 +1157,7 @@ export default function App() {
 
             {/* 定價清單卡片 */}
             <div className="space-y-2">
-              {priceTable.map((item) => (
+              {priceTable.map((item: any) => (
                 <div
                   key={item.id}
                   className="bg-slate-800/90 rounded-2xl p-3 border border-slate-700 flex items-center justify-between"
@@ -1065,28 +1192,123 @@ export default function App() {
         )}
 
         {/* ========================================================= */}
-        {/* TAB 4: Google 試算表匯出與同步設定                         */}
+        {/* TAB 4: Google 試算表自動寫入設定 & 手動匯出               */}
         {/* ========================================================= */}
         {currentTab === 'sync' && (
           <div className="space-y-3.5 animate-fadeIn">
+            {/* 🔥 新功能：Google Apps Script Webhook 自動同步卡片 */}
+            <div className="bg-slate-800/95 rounded-2xl p-4 border border-indigo-500/50 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold text-sm">
+                  <Zap className="w-5 h-5 text-amber-400 fill-amber-400 animate-pulse" />
+                  <span>Google 試算表自動同步 (Webhook)</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30">
+                  免貼上・即時寫入
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                設定 Google Apps Script 網頁應用程式網址後，按下<strong>「立即送出並記錄訂單」</strong>就會自動在 Google 試算表新增一列資料！
+              </p>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1 font-semibold">
+                  Google Apps Script Webhook 網址
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
+                  />
+                  {webhookUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWebhookUrl('');
+                        showToast('已清除 Webhook 網址');
+                      }}
+                      className="px-2.5 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 active:scale-95 cursor-pointer"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 自動寫入開關 */}
+              <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
+                <span className="text-xs text-slate-300 font-medium">送出訂單時自動同步寫入</span>
+                <button
+                  type="button"
+                  onClick={() => setAutoSync(!autoSync)}
+                  className={`w-12 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${
+                    autoSync ? 'bg-emerald-500' : 'bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                      autoSync ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* 教學展開按鈕 */}
+              <div className="pt-2 border-t border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => setShowGasTutorial(!showGasTutorial)}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-900/90 text-amber-300 text-xs font-semibold flex items-center justify-between hover:bg-slate-900 border border-slate-700 cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>查看 1 分鐘 Google 試算表自動寫入設定教學</span>
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showGasTutorial ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showGasTutorial && (
+                  <div className="mt-3 p-3 rounded-xl bg-slate-900/95 border border-slate-700 space-y-2.5 text-xs text-slate-300 animate-fadeIn">
+                    <div className="font-bold text-white text-xs">🛠️ 1 分鐘 Google 試算表設定步驟：</div>
+                    <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-300 leading-relaxed">
+                      <li>開啟您的 <a href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing" target="_blank" rel="noreferrer" className="text-amber-400 underline">Google 試算表</a>。</li>
+                      <li>點選上方選單 <strong>「擴充功能」 ➔ 「Apps Script」</strong>。</li>
+                      <li>將裡面的程式碼全部刪除，並貼上下方的程式碼。</li>
+                      <li>點選右上方 <strong>「部署」 ➔ 「新增部署」</strong>。</li>
+                      <li>類型選擇 <strong>「網頁應用程式 (Web App)」</strong>。</li>
+                      <li>執行身份選 <strong>「我 (Me)」</strong>，誰有存取權選 <strong>「所有人 (Anyone)」</strong>。</li>
+                      <li>點選「部署」授權後，複製產生的 <strong>網頁應用程式網址 (URL)</strong> 並貼到上方的輸入框即可！</li>
+                    </ol>
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => fallbackCopy(gasScriptCode)}
+                        className="w-full py-2 px-3 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-amber-500/30 active:scale-95 cursor-pointer"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>複製 Google Apps Script 程式碼</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 傳統全表一鍵複製卡片 */}
             <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-lg space-y-3">
               <div className="flex items-center gap-2 text-white font-bold text-sm">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-                <span>Google 試算表一鍵匯出</span>
+                <span>全表整批備份匯出</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                你的目標試算表：
-                <a
-                  href="https://docs.google.com/spreadsheets/d/1dp6_yz-AW9KtLX_md2CsmT4e9dE8Y1zYV_3awuxM8ss/edit?usp=sharing"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-emerald-400 underline font-medium inline-flex items-center gap-1 ml-1"
-                >
-                  香港陀螺 V2 <ExternalLink className="w-3 h-3" />
-                </a>
+                若需一次複製全部歷史訂單全表內容，可點擊下方一鍵複製手動貼入 Google Sheet：
               </p>
 
-              {/* 一鍵複製按鈕 */}
               <button
                 type="button"
                 onClick={handleCopyForGoogleSheet}
@@ -1095,9 +1317,6 @@ export default function App() {
                 <Copy className="w-4 h-4" />
                 <span>一鍵複製全表 (直接貼入 Google Sheet)</span>
               </button>
-              <div className="text-[11px] text-slate-400 text-center">
-                複製後在 Google Sheet 的 <code>A1</code> 儲存格按貼上即可完美填滿所有欄位。
-              </div>
             </div>
 
             {/* 統計面板摘要 */}
@@ -1111,19 +1330,19 @@ export default function App() {
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
                   <div className="text-[10px] text-slate-400">陀螺總顆數 (行李體積)</div>
                   <div className="text-sm font-bold font-mono text-indigo-400">
-                    {orders.reduce((s, o) => s + o.totalCount, 0)} 顆
+                    {orders.reduce((s: number, o: any) => s + o.totalCount, 0)} 顆
                   </div>
                 </div>
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
                   <div className="text-[10px] text-slate-400">已收取訂金總額</div>
                   <div className="text-sm font-bold font-mono text-amber-400">
-                    NT$ {orders.reduce((s, o) => s + o.depositPaid, 0).toLocaleString()}
+                    NT$ {orders.reduce((s: number, o: any) => s + o.depositPaid, 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
                   <div className="text-[10px] text-slate-400">預計賣貨便尾款總額</div>
                   <div className="text-sm font-bold font-mono text-rose-400">
-                    NT$ {orders.reduce((s, o) => s + o.remainingCod, 0).toLocaleString()}
+                    NT$ {orders.reduce((s: number, o: any) => s + o.remainingCod, 0).toLocaleString()}
                   </div>
                 </div>
               </div>
